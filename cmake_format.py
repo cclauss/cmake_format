@@ -16,6 +16,20 @@ TODO_REGEX = re.compile(r'^TODO\([^)]+\):.*')
 NOTE_REGEX = re.compile(r'^NOTE\([^)]+\):.*')
 KWARG_REGEX = re.compile(r'[A-Z0-9_]+')
 
+class AttrDict(dict):
+    def __init__(self, *args, **kwargs):
+        super(AttrDict, self).__init__(*args, **kwargs)
+        self.__dict__ = self
+
+def build_attr_dict_r(regular_dict):
+    attr_dict = AttrDict()
+    for key, value in regular_dict.iteritems():
+        if isinstance(value, dict):
+            attr_dict[key] = build_attr_dict_r(value)
+        else:
+            attr_dict[key] = value
+    return attr_dict
+
 def pretty_print_comment_block(pretty_printer, comment_lines):
     stripped_lines = [line[1:].strip() for line in comment_lines]
 
@@ -210,17 +224,16 @@ def pretty_print(outfile, parsed_listfile, line_width):
     printer.flush_comment()
     printer.flush_blanks()
 
-def process_file(infile, outfile):
-    line_width = 80
+def process_file(config, infile, outfile):
     active = True
     format_me = ''
     for line in iter(infile.readline, b''):
         if active:
             if line.find('cmake_format: off') != -1:
                 parsed_listfile = cmp.parse(format_me)
-                pretty_print(outfile, parsed_listfile, line_width)
+                pretty_print(outfile, parsed_listfile, config.line_width)
                 parsed_listfile = cmp.parse(line)
-                pretty_print(outfile, parsed_listfile, line_width)
+                pretty_print(outfile, parsed_listfile, config.line_width)
                 format_me = ''
                 active = False
             else:
@@ -229,7 +242,7 @@ def process_file(infile, outfile):
 
             if line.find('cmake_format: on') != -1:
                 parsed_listfile = cmp.parse(line)
-                pretty_print(outfile, parsed_listfile, line_width)
+                pretty_print(outfile, parsed_listfile, config.line_width)
                 active = True
                 format_me = ''
             else:
@@ -237,15 +250,25 @@ def process_file(infile, outfile):
 
     if format_me:
         parsed_listfile = cmp.parse(format_me)
-        pretty_print(outfile, parsed_listfile, line_width)
+        pretty_print(outfile, parsed_listfile, config.line_width)
+
+DEFAULT_CONFIG = build_attr_dict_r(dict(
+    line_width=80,
+    tab_size=2,
+    ))
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('-i', '--in-place', action='store_true')
     parser.add_argument('-o', '--outfile-path', default='-')
-    parser.add_argument('-w', '--line-width', type=int, default=100)
+    parser.add_argument('-w', '--line-width', type=int, default=80)
+    parser.add_argument('-t', '--tab-size', type=int, default=2)
     parser.add_argument('infilepaths', nargs='+')
     args = parser.parse_args()
+
+    config = DEFAULT_CONFIG
+    config.line_width = args.line_width
+    config.tab_size = args.tab_size
 
     for infile_path in args.infilepaths:
         if args.in_place:
@@ -259,7 +282,7 @@ def main():
         parse_ok = True
         try:
             with open(infile_path, 'r') as infile:
-                process_file(infile, outfile)
+                process_file(config, infile, outfile)
         except:
             parse_ok = False
             raise
