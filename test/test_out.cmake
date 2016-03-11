@@ -8,7 +8,7 @@
 foo(arg1 arg2 arg3 arg4 arg5)
 
 foo(arg1,
-    arg2,
+    arg2, # This command must be split to accomodate this comment.
     arg3,
     arg4)
 
@@ -27,7 +27,8 @@ foo(very_long_argument1
     "This is a string that should not be split into multiple lines")
 
 foo(very_long_argument1
-    very_long_argument2
+    very_long_argument2 # This comment should be preserved, moreover it should
+                        # be split across two lines.
     arg3)
 
 # This part of the comment should be formatted but...
@@ -54,7 +55,8 @@ if(something)
   if(something_else)
     # This comment is in-scope.
     foo(arg1,
-        arg2
+        arg2 # this is a comment for arg2 this is more comment for arg2, it
+             # should be joined with the first.
         arg3)
   endif()
 endif()

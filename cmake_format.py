@@ -112,7 +112,23 @@ def format_args(config, line_width, args):
         if len(single_line) < line_width:
             return [single_line]
     
-    return [arg.contents for arg in args]
+    lines = []
+    for arg in args:
+        if arg.comments:
+            comment_stream = ' '.join([comment[1:].strip() 
+                                       for comment in arg.comments])
+            initial_indent = arg.contents + ' # '
+            subsequent_indent = ' '*len(arg.contents) + ' # '
+            wrapper = textwrap.TextWrapper(width=line_width,
+                                           expand_tabs=True,
+                                           replace_whitespace=True,
+                                           drop_whitespace=True,
+                                           initial_indent=initial_indent,
+                                           subsequent_indent=subsequent_indent)
+            lines.extend(wrapper.wrap(comment_stream))
+        else:
+            lines.append(arg.contents)
+    return lines
 
 def format_command(config, command, line_width):
     """Formats a cmake command call into a block with at most line_width chars.
