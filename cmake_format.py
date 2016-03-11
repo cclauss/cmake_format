@@ -88,6 +88,43 @@ def arg_exists_with_comment(args):
             return True
     return False
 
+def format_single_arg(config, line_width, arg):
+    """Return a list of lines that reflow the single arg and all it's comments
+       into a block with width at most line_width."""
+    if arg.comments:
+        comment_stream = ' '.join([comment[1:].strip() 
+                                   for comment in arg.comments])
+        initial_indent = arg.contents + ' # '
+        subsequent_indent = ' '*len(arg.contents) + ' # '
+        wrapper = textwrap.TextWrapper(width=line_width,
+                                       expand_tabs=True,
+                                       replace_whitespace=True,
+                                       drop_whitespace=True,
+                                       initial_indent=initial_indent,
+                                       subsequent_indent=subsequent_indent)
+        return wrapper.wrap(comment_stream)
+    else:
+        return [arg.contents]
+
+def format_arglist(config, line_width, args):
+    """Given a list arguments containing at most one KWARG (in position [0] 
+       if it exists), format into a list of lines."""
+    if len(args) < 1:
+        return []
+
+    if KWARG_REGEX.match(args[0].contents):
+        indent_str = ' '*len(args[0].contents)
+    else:
+        indent_str = ''
+
+    lines = ['']
+    for arg in args:
+        current_available_line_width = line_width - len(lines[-1])
+        # First, assume that the argument will not fit on the current line,
+        # and compute new line(s) for the argument. There might be more than
+        # one if there is a comment.
+        
+
 
 def format_args(config, line_width, args):
     """Format arguments into a block with at most line_width chars."""
@@ -98,20 +135,7 @@ def format_args(config, line_width, args):
     
     lines = []
     for arg in args:
-        if arg.comments:
-            comment_stream = ' '.join([comment[1:].strip() 
-                                       for comment in arg.comments])
-            initial_indent = arg.contents + ' # '
-            subsequent_indent = ' '*len(arg.contents) + ' # '
-            wrapper = textwrap.TextWrapper(width=line_width,
-                                           expand_tabs=True,
-                                           replace_whitespace=True,
-                                           drop_whitespace=True,
-                                           initial_indent=initial_indent,
-                                           subsequent_indent=subsequent_indent)
-            lines.extend(wrapper.wrap(comment_stream))
-        else:
-            lines.append(arg.contents)
+        lines.extend(format_single_arg(config, line_width, arg))
     return lines
 
 def format_command(config, command, line_width):
