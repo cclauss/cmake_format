@@ -52,7 +52,7 @@ def pretty_print_comment_block(pretty_printer, comment_lines):
         pretty_printer.outfile.write('\n')
 
 
-def format_args(chars_available, args):
+def format_args_old(chars_available, args):
     # Now split the arguments into groups based on KWARGS which are identified by all caps
     arg_split = [[]]
     current_list = arg_split[-1]
@@ -85,6 +85,16 @@ def format_args(chars_available, args):
     return lines
 
 
+def write_block(outfile, indent, lines, skip_first=True):
+    indent_str = ' '*indent
+    for line in lines:
+        outfile.write(indent_str)
+        outfile.write(line)
+        outfile.write('\n')
+
+def format_args(line_width, args):
+    """Format arguments into a block with at most line_width chars."""
+    return [arg.contents for arg in args]
 
 def pretty_print_command(pretty_printer, command):
     """Formats a cmake command call"""
@@ -105,53 +115,55 @@ def pretty_print_command(pretty_printer, command):
     if command.name in SCOPE_INCREASE:
         pretty_printer.scope_depth += 1
 
-    # If the whole thing doesn't fit on one line, then try to break arguments 
-    # onto new lines
-    lines_a = format_args(pretty_printer.line_width - len(command.name) - 1, 
-                          command.body)
-    lines_b = format_args(pretty_printer.line_width - scope_indent - 4, 
-                          command.body)
-    # TODO(josh) : handle inline comment for the command
-    if len(lines_a) > 4 * len(lines_b):
-        indent = scope_indent + 4
-        indent_str = ' '*indent
-        outfile.write('\n')
-        for line in lines_b[:-1]:
-            outfile.write(scope_indent_str)
-            outfile.write(line)
-            outfile.write('\n')
-        line = lines_b[-1]
-        outfile.write(indent_str)
-        outfile.write(line)
-        if len(line) + len(scope_indent_str) + 1 > pretty_printer.line_width:
-            outfile.write('\n')
-            outfile.write(indent_str[:-1])
-        outfile.write(')\n')
-
+    # If there are no args then just print the command
+    if len(command.body) < 1:
+        pretty_printer.outfile.write(')\n')
     else:
-        indent = scope_indent + len(command.name) + len('(')
-        indent_str = ' '*indent
-
-        outfile.write(lines_b[0])
-        outfile.write('\n')
-        for line in lines_b[1:-1]:
-            outfile.write(scope_indent_str)
+        # If the whole thing doesn't fit on one line, then try to break arguments 
+        # onto new lines
+        lines_a = format_args(pretty_printer.line_width - len(command.name) - 1, 
+                              command.body)
+        lines_b = format_args(pretty_printer.line_width - scope_indent - 4, 
+                              command.body)
+        # TODO(josh) : handle inline comment for the command
+        if len(lines_a) > 4 * len(lines_b):
+            indent = scope_indent + 4
+            indent_str = ' '*indent
+            outfile.write('\n')
+            for line in lines_b[:-1]:
+                outfile.write(indent_str)
+                outfile.write(line)
+                outfile.write('\n')
+            line = lines_b[-1]
+            outfile.write(indent_str)
             outfile.write(line)
+            if len(line) + len(indent_str) + 1 > pretty_printer.line_width:
+                outfile.write('\n')
+                outfile.write(indent_str[:-1])
+            outfile.write(')\n')
+
+        else:
+            indent = scope_indent + len(command.name) + len('(')
+            indent_str = ' '*indent
+
+            outfile.write(lines_b[0])
             outfile.write('\n')
-        line = lines_b[-1]
-        outfile.write(indent_str)
-        outfile.write(line)
-        if len(line) + len(scope_indent_str) + 1 > pretty_printer.line_width:
-            outfile.write('\n')
-            outfile.write(indent_str[:-1])
-        outfile.write(')\n')
+            for line in lines_b[1:-1]:
+                outfile.write(indent_str)
+                outfile.write(line)
+                outfile.write('\n')
+            line = lines_b[-1]
+            outfile.write(indent_str)
+            outfile.write(line)
+            if len(line) + len(scope_indent_str) + 1 > pretty_printer.line_width:
+                outfile.write('\n')
+                outfile.write(indent_str[:-1])
+            outfile.write(')\n')
 
-#    # TODO(josh): handle comment at end of argument line
-#    pretty_printer.outfile.write(')\n')
+# TODO(josh): handle comment at end of argument line
 
-    if command.name in SCOPE_INCREASE:
-        pretty_printer.scope_depth += 1
-
+    if command.name in SCOPE_DECREASE:
+        pretty_printer.scope_depth -= 1
 
 class PrettyPrinter(object):
 
@@ -169,7 +181,6 @@ class PrettyPrinter(object):
             self.blank_parts = list()
 
     def flush_comment(self):
-        # TODO(josh): Handle lines starting with TODO.
         if self.comment_parts:
             pretty_print_comment_block(self, self.comment_parts)
             self.comment_parts = list()
@@ -199,6 +210,34 @@ def pretty_print(outfile, parsed_listfile, line_width):
     printer.flush_comment()
     printer.flush_blanks()
 
+def process_file(infile, outfile):
+    line_width = 80
+    active = True
+    format_me = ''
+    for line in iter(infile.readline, b''):
+        if active:
+            if line.find('cmake_format: off') != -1:
+                parsed_listfile = cmp.parse(format_me)
+                pretty_print(outfile, parsed_listfile, line_width)
+                parsed_listfile = cmp.parse(line)
+                pretty_print(outfile, parsed_listfile, line_width)
+                format_me = ''
+                active = False
+            else:
+                format_me += line
+        else:
+
+            if line.find('cmake_format: on') != -1:
+                parsed_listfile = cmp.parse(line)
+                pretty_print(outfile, parsed_listfile, line_width)
+                active = True
+                format_me = ''
+            else:
+                outfile.write(line)
+
+    if format_me:
+        parsed_listfile = cmp.parse(format_me)
+        pretty_print(outfile, parsed_listfile, line_width)
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -220,32 +259,7 @@ def main():
         parse_ok = True
         try:
             with open(infile_path, 'r') as infile:
-                active = True
-                format_me = ''
-                for line in iter(infile.readline, b''):
-                    if active:
-                        if line.find('cmake_format: off') != -1:
-                            parsed_listfile = cmp.parse(format_me)
-                            pretty_print(outfile, parsed_listfile, args.line_width)
-                            parsed_listfile = cmp.parse(line)
-                            pretty_print(outfile, parsed_listfile, args.line_width)
-                            format_me = ''
-                            active = False
-                        else:
-                            format_me += line
-                    else:
-
-                        if line.find('cmake_format: on') != -1:
-                            parsed_listfile = cmp.parse(line)
-                            pretty_print(outfile, parsed_listfile, args.line_width)
-                            active = True
-                            format_me = ''
-                        else:
-                            outfile.write(line)
-
-            if format_me:
-                parsed_listfile = cmp.parse(format_me)
-                pretty_print(outfile, parsed_listfile, args.line_width)
+                process_file(infile, outfile)
         except:
             parse_ok = False
             raise
