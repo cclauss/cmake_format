@@ -119,12 +119,26 @@ def format_arglist(config, line_width, args):
 
     lines = ['']
     for arg in args:
-        current_available_line_width = line_width - len(lines[-1])
-        # First, assume that the argument will not fit on the current line,
-        # and compute new line(s) for the argument. There might be more than
-        # one if there is a comment.
-        
+        # Lines to add if we were to put the arg at the end of the current
+        # line.
+        lines_append = format_single_arg(config, 
+                                         line_width - len(lines[-1]), arg)
 
+        # Lines to add if we are going to make a new line for this arg
+        lines_new = format_single_arg(config, line_width - len(indent_str))
+
+        # If going to a new line greatly reduces the number of lines required
+        # then choose that option over the latter.
+        if len(lines_new) < 4 * len(lines):
+            lines.extend(lines_new)
+        else:
+            arg_indent_str = ' '*len(lines[-1] + 1)
+            lines[-1] += lines_append[0]
+
+            for line in lines_append[1:]:
+                lines.append(arg_indent_str + line)
+
+    return lines
 
 def format_args(config, line_width, args):
     """Format arguments into a block with at most line_width chars."""
