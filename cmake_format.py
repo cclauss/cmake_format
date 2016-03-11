@@ -215,9 +215,9 @@ class PrettyPrinter(object):
             raise ValueError('Unrecognized parse type {}'.format(type(part)))
 
 
-def pretty_print(outfile, parsed_listfile, line_width):
+def pretty_print(config, outfile, parsed_listfile):
     indent = 2
-    printer = PrettyPrinter(outfile, indent, line_width)
+    printer = PrettyPrinter(outfile, config.tab_size, config.line_width)
 
     for part in parsed_listfile:
         printer.consume_part(part)
@@ -225,15 +225,18 @@ def pretty_print(outfile, parsed_listfile, line_width):
     printer.flush_blanks()
 
 def process_file(config, infile, outfile):
+    """Iterates through lines in the file and watches for cmake_format on/off
+       sentinels. Consumes lines for formatting when active, and passes through
+       to the outfile when not."""
     active = True
     format_me = ''
     for line in iter(infile.readline, b''):
         if active:
             if line.find('cmake_format: off') != -1:
                 parsed_listfile = cmp.parse(format_me)
-                pretty_print(outfile, parsed_listfile, config.line_width)
+                pretty_print(config, outfile, parsed_listfile)
                 parsed_listfile = cmp.parse(line)
-                pretty_print(outfile, parsed_listfile, config.line_width)
+                pretty_print(config, outfile, parsed_listfile)
                 format_me = ''
                 active = False
             else:
@@ -242,7 +245,7 @@ def process_file(config, infile, outfile):
 
             if line.find('cmake_format: on') != -1:
                 parsed_listfile = cmp.parse(line)
-                pretty_print(outfile, parsed_listfile, config.line_width)
+                pretty_print(config, outfile, parsed_listfile)
                 active = True
                 format_me = ''
             else:
@@ -250,7 +253,7 @@ def process_file(config, infile, outfile):
 
     if format_me:
         parsed_listfile = cmp.parse(format_me)
-        pretty_print(outfile, parsed_listfile, config.line_width)
+        pretty_print(config, outfile, parsed_listfile)
 
 DEFAULT_CONFIG = build_attr_dict_r(dict(
     line_width=80,
