@@ -55,4 +55,5 @@ endif()
 
 # This very long command should be broken up along keyword arguments
 foo(some_thing HEADERS foo.h bar.h baz.h foo.h bar.h baz.h foo.h bar.h SOURCES some_directory/*.cc
-    some_other_directory/with_a_subdirectory/*.cc DEPENDS foo bar)
+    some_other_directory/with_a_subdirectory/*.cc 
+    and_yet_one_more/directry_with_sub/*.cc DEPENDS foo bar)

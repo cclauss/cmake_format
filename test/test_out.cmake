@@ -8,23 +8,16 @@
 foo(arg1 arg2 arg3 arg4 arg5)
 
 # This very long command should be split to multiple lines
-foo(very_long_argument1
-    very_long_argument2
-    very_long_argument3
-    very_long_argument4
-    very_long_argument5
-    very_long_argument_6)
+foo(very_long_argument1 very_long_argument2 very_long_argument3
+    very_long_argument4 very_long_argument5 very_long_argument_6)
 
 # The string in this command should not be split
-foo(very_long_argument1
-    very_long_argumetn2
-    very_long_argument3
+foo(very_long_argument1 very_long_argumetn2 very_long_argument3
     "This is a string that should not be split into multiple lines")
 
-foo(very_long_argument1
-    very_long_argument2 # This comment should be preserved, moreover it should
-                        # be split across two lines.
-    arg3)
+foo(very_long_argument1 very_long_argument2 # This comment should be preserved,
+                                            # moreover it should be split across
+                                            # two lines. arg3)
 
 # This part of the comment should be formatted but...
 #
@@ -49,27 +42,14 @@ foo(very_long_argument1
 if(something)
   if(something_else)
     # This comment is in-scope.
-    foo(arg1,
-        arg2 # this is a comment for arg2 this is more comment for arg2, it
-             # should be joined with the first.
-        arg3)
+    foo(arg1, arg2 # this is a comment for arg2 this is more comment for arg2,
+                   # it should be joined with the first. arg3)
   endif()
 endif()
 
 # This very long command should be broken up along keyword arguments
 foo(some_thing
-    HEADERS
-    foo.h
-    bar.h
-    baz.h
-    foo.h
-    bar.h
-    baz.h
-    foo.h
-    bar.h
-    SOURCES
-    some_directory/*.cc
-    some_other_directory/with_a_subdirectory/*.cc
-    DEPENDS
-    foo
-    bar)
+    HEADERS foo.h bar.h baz.h foo.h bar.h baz.h foo.h bar.h
+    SOURCES some_directory/*.cc some_other_directory/with_a_subdirectory/*.cc
+    and_yet_one_more/directry_with_sub/*.cc
+    DEPENDS foo bar)

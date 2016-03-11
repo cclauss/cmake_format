@@ -114,25 +114,30 @@ def format_arglist(config, line_width, args):
 
     if KWARG_REGEX.match(args[0].contents):
         indent_str = ' '*len(args[0].contents)
+        lines = [args[0].contents]
+        args.pop(0)
     else:
         indent_str = ''
+        lines = ['']
 
-    lines = ['']
     for arg in args:
         # Lines to add if we were to put the arg at the end of the current
         # line.
         lines_append = format_single_arg(config, 
-                                         line_width - len(lines[-1]), arg)
+                                         line_width - len(lines[-1]) - 1, arg)
 
         # Lines to add if we are going to make a new line for this arg
-        lines_new = format_single_arg(config, line_width - len(indent_str))
+        lines_new = format_single_arg(config, line_width - len(indent_str), arg)
 
         # If going to a new line greatly reduces the number of lines required
         # then choose that option over the latter.
-        if len(lines_new) < 4 * len(lines):
+        if (len(lines_append[0]) + len(lines[-1]) + 1 > line_width
+                or 4 * len(lines_new) < len(lines_append)):
             lines.extend(lines_new)
         else:
-            arg_indent_str = ' '*len(lines[-1] + 1)
+            arg_indent_str = ' '*(len(lines[-1]) + 1)
+            if len(lines[-1]) > 0:
+                lines[-1] += ' '
             lines[-1] += lines_append[0]
 
             for line in lines_append[1:]:
@@ -150,8 +155,8 @@ def format_args(config, line_width, args):
     lines = []
     arg_multilist = split_args_by_kwargs(args)
     for arg_sublist in arg_multilist:
-        for arg in arg_sublist:
-            lines.extend(format_single_arg(config, line_width, arg))
+        sublist_lines = format_arglist(config, line_width, arg_sublist)
+        lines.extend(sublist_lines)
     return lines
 
 def format_command(config, command, line_width):
