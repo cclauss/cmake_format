@@ -84,89 +84,67 @@ def format_args(chars_available, args):
 
     return lines
 
+
+
 def pretty_print_command(pretty_printer, command):
-    """Formats a command (in the most expanded form) as:
-        command(normal_arg normal_arg
-                KWARG normal_arg normal_arg normal_arg
-                KWARG normal_arg
-                      normal_arg
-                      normal_arg # Has a comment
-                                 # That extends multiple lines
-                      normal_arg
-                      normal_arg)
-    """
+    """Formats a cmake command call"""
+
+    outfile = pretty_printer.outfile
+
     if command.name in SCOPE_DECREASE:
         pretty_printer.scope_depth -= 1
 
     # No matter what, we can go ahead and print the command name. This also helps us figure out
     # how much space we have for indents
-    indent_str = ' ' * (pretty_printer.indent * pretty_printer.scope_depth)
-    pretty_printer.outfile.write(indent_str)
-    pretty_printer.outfile.write(command.name)
-    pretty_printer.outfile.write('(')
+    scope_indent = (pretty_printer.indent * pretty_printer.scope_depth)
+    scope_indent_str = ' ' * scope_indent
+    outfile.write(scope_indent_str)
+    outfile.write(command.name)
+    outfile.write('(')
 
     if command.name in SCOPE_INCREASE:
         pretty_printer.scope_depth += 1
 
-    # This is the new indent, which ensures that all arguments are aligned with the opening
-    # parenthesis of the command
-    indent_str += ' '*(len(command.name) + 1)
+    # If the whole thing doesn't fit on one line, then try to break arguments 
+    # onto new lines
+    lines_a = format_args(pretty_printer.line_width - len(command.name) - 1, 
+                          command.body)
+    lines_b = format_args(pretty_printer.line_width - scope_indent - 4, 
+                          command.body)
+    # TODO(josh) : handle inline comment for the command
+    if len(lines_a) > 4 * len(lines_b):
+        indent = scope_indent + 4
+        indent_str = ' '*indent
+        outfile.write('\n')
+        for line in lines_b[:-1]:
+            outfile.write(scope_indent_str)
+            outfile.write(line)
+            outfile.write('\n')
+        line = lines_b[-1]
+        outfile.write(indent_str)
+        outfile.write(line)
+        if len(line) + len(scope_indent_str) + 1 > pretty_printer.line_width:
+            outfile.write('\n')
+            outfile.write(indent_str[:-1])
+        outfile.write(')\n')
 
-    # Check if the whole thing fits on one line
-    arg_strs = [arg.contents for arg in command.body]
-    single_line = ' '.join(arg_strs)
-    if len(indent_str) + len(single_line) + 1 < pretty_printer.line_width:
-        pretty_printer.outfile.write(single_line)
-        pretty_printer.outfile.write(')\n')
-        return
-
-    # If the whole thing doesn't fit on one line, then try to break arguments onto new lines,
-    # but prefer breaking on KWARGS (all caps)
-    chars_available = pretty_printer.line_width - len(indent_str)
-    lines = format_args(chars_available, command.body)
-    pretty_printer.outfile.write(lines[0])
-    pretty_printer.outfile.write('\n')
-    for line in lines[1:-1]:
-        pretty_printer.outfile.write(indent_str)
-        pretty_printer.outfile.write(line)
-        pretty_printer.outfile.write('\n')
-    pretty_printer.outfile.write(indent_str)
-    pretty_printer.outfile.write(lines[-1])
-    if len(indent_str) + len(lines[-1]) < pretty_printer.line_width:
-        pretty_printer.outfile.write(')\n')
     else:
-        pretty_printer.outfile.write('\n')
-        pretty_printer.outfile.write(indent_str)
-        pretty_printer.outfile.write(')\n')
+        indent = scope_indent + len(command.name) + len('(')
+        indent_str = ' '*indent
 
-#    first_arg_on_line = True
-#    for arg in command.body:
-#        if first_arg_on_line:
-#            chars_written += len(arg.contents)
-#            pretty_printer.outfile.write(arg.contents)
-#            first_arg_on_line = False
-#        elif chars_written + len(arg.contents) + 1 < pretty_printer.line_width:
-#            chars_written += len(arg.contents) + 1
-#            pretty_printer.outfile.write(' ')
-#            pretty_printer.outfile.write(arg.contents)
-#        else:
-#            pretty_printer.outfile.write('\n')
-#            pretty_printer.outfile.write(indent_str)
-#            pretty_printer.outfile.write(arg.contents)
-#            chars_written = len(indent_str) + len(arg.contents)
-
-#        if arg.comments:
-#            comment_text = ' '.join([str(comment)[2:] for comment in arg.comments])
-#            available_width = pretty_printer.line_width - chars_written
-#            wrapper = textwrap.TextWrapper(width=available_width,
-#                                           drop_whitespace=True,
-#                                           initial_indent=' # ',
-#                                           subsequent_indent=' # ')
-#            wrapped_comment = ('\n' + ' ' * chars_written).join(wrapper.wrap(comment_text))
-#            pretty_printer.outfile.write(wrapped_comment)
-#            pretty_printer.outfile.write('\n')
-#            pretty_printer.outfile.write(indent_str)
-#            chars_written = len(indent_str)
+        outfile.write(lines_b[0])
+        outfile.write('\n')
+        for line in lines_b[1:-1]:
+            outfile.write(scope_indent_str)
+            outfile.write(line)
+            outfile.write('\n')
+        line = lines_b[-1]
+        outfile.write(indent_str)
+        outfile.write(line)
+        if len(line) + len(scope_indent_str) + 1 > pretty_printer.line_width:
+            outfile.write('\n')
+            outfile.write(indent_str[:-1])
+        outfile.write(')\n')
 
 #    # TODO(josh): handle comment at end of argument line
 #    pretty_printer.outfile.write(')\n')
