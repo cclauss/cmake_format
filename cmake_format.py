@@ -113,8 +113,9 @@ def format_arglist(config, line_width, args):
         return []
 
     if KWARG_REGEX.match(args[0].contents):
-        indent_str = ' '*len(args[0].contents)
-        lines = [args[0].contents]
+        kwarg = args[0].contents
+        lines = [kwarg]
+        indent_str = ' '*(len(kwarg) + 1)
         args.pop(0)
     else:
         indent_str = ''
@@ -133,7 +134,8 @@ def format_arglist(config, line_width, args):
         # then choose that option over the latter.
         if (len(lines_append[0]) + len(lines[-1]) + 1 > line_width
                 or 4 * len(lines_new) < len(lines_append)):
-            lines.extend(lines_new)
+            for line in lines_new:
+                lines.append(indent_str + line)
         else:
             arg_indent_str = ' '*(len(lines[-1]) + 1)
             if len(lines[-1]) > 0:
