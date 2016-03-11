@@ -181,11 +181,12 @@ def pretty_print_command(pretty_printer, command):
 
 class PrettyPrinter(object):
 
-    def __init__(self, outfile, indent, line_width):
+    def __init__(self, config, outfile):
+        self.config = config
         self.outfile = outfile
         self.scope_depth = 0
-        self.indent = indent
-        self.line_width = line_width
+        self.indent = config.tab_size
+        self.line_width = config.line_width
         self.comment_parts = list()
         self.blank_parts = list()
 
@@ -214,29 +215,27 @@ class PrettyPrinter(object):
         else:
             raise ValueError('Unrecognized parse type {}'.format(type(part)))
 
-
-def pretty_print(config, outfile, parsed_listfile):
-    indent = 2
-    printer = PrettyPrinter(outfile, config.tab_size, config.line_width)
-
-    for part in parsed_listfile:
-        printer.consume_part(part)
-    printer.flush_comment()
-    printer.flush_blanks()
+    def consume_parts(self, parsed_listfile):
+        for part in parsed_listfile:
+            self.consume_part(part)
+        self.flush_comment()
+        self.flush_blanks()
 
 def process_file(config, infile, outfile):
     """Iterates through lines in the file and watches for cmake_format on/off
        sentinels. Consumes lines for formatting when active, and passes through
        to the outfile when not."""
+    pretty_printer = PrettyPrinter(config, outfile)
+
     active = True
     format_me = ''
     for line in iter(infile.readline, b''):
         if active:
             if line.find('cmake_format: off') != -1:
                 parsed_listfile = cmp.parse(format_me)
-                pretty_print(config, outfile, parsed_listfile)
+                pretty_printer.consume_parts(parsed_listfile)
                 parsed_listfile = cmp.parse(line)
-                pretty_print(config, outfile, parsed_listfile)
+                pretty_printer.consume_parts(parsed_listfile)
                 format_me = ''
                 active = False
             else:
@@ -245,7 +244,7 @@ def process_file(config, infile, outfile):
 
             if line.find('cmake_format: on') != -1:
                 parsed_listfile = cmp.parse(line)
-                pretty_print(config, outfile, parsed_listfile)
+                pretty_printer.consume_parts(parsed_listfile)
                 active = True
                 format_me = ''
             else:
@@ -253,7 +252,7 @@ def process_file(config, infile, outfile):
 
     if format_me:
         parsed_listfile = cmp.parse(format_me)
-        pretty_print(config, outfile, parsed_listfile)
+        pretty_printer.consume_parts(parsed_listfile)
 
 DEFAULT_CONFIG = build_attr_dict_r(dict(
     line_width=80,
