@@ -148,8 +148,10 @@ def format_args(config, line_width, args):
             return [single_line]
     
     lines = []
-    for arg in args:
-        lines.extend(format_single_arg(config, line_width, arg))
+    arg_multilist = split_args_by_kwargs(args)
+    for arg_sublist in arg_multilist:
+        for arg in arg_sublist:
+            lines.extend(format_single_arg(config, line_width, arg))
     return lines
 
 def format_command(config, command, line_width):
