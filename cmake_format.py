@@ -8,13 +8,6 @@ import sys
 import tempfile
 import textwrap
 
-SCOPE_INCREASE = ['if', 'foreach', 'while', 'function', 'macro']
-SCOPE_DECREASE = ['endif', 'endforeach', 'endwhile', 'endfunction', 'endmacro']
-
-
-NOTE_REGEX = re.compile(r'^[A-Z_]+\([^)]+\):.*')
-KWARG_REGEX = re.compile(r'[A-Z0-9_]+')
-
 class AttrDict(dict):
     def __init__(self, *args, **kwargs):
         super(AttrDict, self).__init__(*args, **kwargs)
@@ -28,6 +21,18 @@ def build_attr_dict_r(regular_dict):
         else:
             attr_dict[key] = value
     return attr_dict
+
+SCOPE_INCREASE = ['if', 'foreach', 'while', 'function', 'macro']
+SCOPE_DECREASE = ['endif', 'endforeach', 'endwhile', 'endfunction', 'endmacro']
+
+NOTE_REGEX = re.compile(r'^[A-Z_]+\([^)]+\):.*')
+KWARG_REGEX = re.compile(r'[A-Z0-9_]+')
+
+DEFAULT_CONFIG = build_attr_dict_r(dict(
+    line_width=80,
+    tab_size=2,
+    max_subargs_per_line=3,
+    ))
 
 def format_comment_block(config, line_width, comment_lines):
     """Reflow a comment block into the given line_width. Return a list of 
@@ -305,11 +310,6 @@ def process_file(config, infile, outfile):
     if format_me:
         parsed_listfile = cmp.parse(format_me)
         pretty_printer.consume_parts(parsed_listfile)
-
-DEFAULT_CONFIG = build_attr_dict_r(dict(
-    line_width=80,
-    tab_size=2,
-    ))
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
