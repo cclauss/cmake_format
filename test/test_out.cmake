@@ -7,11 +7,6 @@
 # command call should be formatted to a single line.
 foo(arg1 arg2 arg3 arg4 arg5)
 
-foo(arg1,
-    arg2, # This command must be split to accomodate this comment.
-    arg3,
-    arg4)
-
 # This very long command should be split to multiple lines
 foo(very_long_argument1
     very_long_argument2

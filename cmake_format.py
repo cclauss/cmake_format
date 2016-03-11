@@ -12,8 +12,7 @@ SCOPE_INCREASE = ['if', 'foreach', 'while', 'function', 'macro']
 SCOPE_DECREASE = ['endif', 'endforeach', 'endwhile', 'endfunction', 'endmacro']
 
 
-TODO_REGEX = re.compile(r'^TODO\([^)]+\):.*')
-NOTE_REGEX = re.compile(r'^NOTE\([^)]+\):.*')
+NOTE_REGEX = re.compile(r'^[A-Z_]+\([^)]+\):.*')
 KWARG_REGEX = re.compile(r'[A-Z0-9_]+')
 
 class AttrDict(dict):
@@ -31,14 +30,16 @@ def build_attr_dict_r(regular_dict):
     return attr_dict
 
 def format_comment_block(config, line_width, comment_lines):
+    """Reflow a comment block into the given line_width. Return a list of 
+       lines."""
     stripped_lines = [line[1:].strip() for line in comment_lines]
 
     paragraph_lines = list()
     paragraphs = list()
-    # A new "paragraph" starts at a paragraph boundary (double newline), or at the start of a
-    # TODO(...): or NOTE(...):
+    # A new "paragraph" starts at a paragraph boundary (double newline), or at 
+    # the start of a TODO(...): or NOTE(...):
     for line in stripped_lines:
-        if TODO_REGEX.match(line) or NOTE_REGEX.match(line):
+        if NOTE_REGEX.match(line):
             paragraphs.append(' '.join(paragraph_lines))
             paragraph_lines = [line]
         elif line:
@@ -65,40 +66,23 @@ def format_comment_block(config, line_width, comment_lines):
         lines.extend(wrapper.wrap(paragraph_text))
     return lines
 
-def format_args_old(chars_available, args):
-    # Now split the arguments into groups based on KWARGS which are identified by all caps
+def split_args_by_kwargs(args):
+    """Takes in a list of arguments and returns a lists of lists. Each sublist
+       starts with a kwarg (ALL_CAPS) and contains only non-kwargs after."""
     arg_split = [[]]
-    current_list = arg_split[-1]
     for arg in args:
         if KWARG_REGEX.match(arg.contents):
             arg_split.append([])
-            current_list = arg_split[-1]
-        current_list.append(arg)
+        arg_split[-1].append(arg)
 
+    # If there are no initial non-kwargs then remove that sublist
     if not arg_split[0]:
         arg_split.pop(0)
 
-
-    lines = []
-    for arg_list in arg_split:
-        lines.append(arg_list[0].contents)
-        indent_str = ' '*(len(arg_list[0].contents) + 1)
-        # If the list is "long" put one element on each line
-        if len(arg_list) > 4:
-            lines[-1] += ' ' + arg_list[1].contents
-            for arg in arg_list[2:]:
-              lines.append(indent_str + arg.contents)
-        else:
-          for arg in arg_list[1:]:
-              if len(arg.contents) + len(lines[-1]) + 1 < chars_available:
-                  lines[-1] += ' ' + arg.contents
-              else:
-                  lines.append(indent_str + arg.contents)
-
-    return lines
-
+    return arg_split
 
 def arg_exists_with_comment(args):
+    """Return true if any arg in the arglist contains a comment."""
     for arg in args:
         if arg.comments:
             return True
