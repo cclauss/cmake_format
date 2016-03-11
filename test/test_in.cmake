@@ -10,6 +10,10 @@
 foo(arg1 arg2 arg3
     arg4 arg5)
 
+foo(arg1, arg2, # This command must be split to accomodate this comment.
+    arg3,
+    arg4)
+
 # This very long command should be split to multiple lines
 foo(very_long_argument1 very_long_argument2 very_long_argument3 very_long_argument4 very_long_argument5 very_long_argument_6)
 

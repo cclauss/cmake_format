@@ -98,14 +98,25 @@ def format_args_old(chars_available, args):
     return lines
 
 
-def format_args(line_width, args):
+def arg_exists_with_comment(args):
+    for arg in args:
+        if arg.comments:
+            return True
+    return False
+
+
+def format_args(config, line_width, args):
     """Format arguments into a block with at most line_width chars."""
+    if not arg_exists_with_comment(args):
+        single_line = ' '.join([arg.contents for arg in args])
+        if len(single_line) < line_width:
+            return [single_line]
+    
     return [arg.contents for arg in args]
 
 def format_command(config, command, line_width):
     """Formats a cmake command call into a block with at most line_width chars.
        Returns a list of lines."""
-
     
     command_start = command.name + '('
 
@@ -115,11 +126,13 @@ def format_command(config, command, line_width):
     else:
         # Format args into a block that is aligned with the end of the 
         # parenthesis after the command name
-        lines_a = format_args(line_width - len(command_start), command.body)
+        lines_a = format_args(config, line_width - len(command_start), 
+                              command.body)
 
         # Format args into a block that is aligned with the command start
         # plus one tab size
-        lines_b = format_args(line_width - config.tab_size, command.body)
+        lines_b = format_args(config,
+                              line_width - config.tab_size, command.body)
         
         # TODO(josh) : handle inline comment for the command
         # If the version aligned with the comand start + indent has *alot*
@@ -139,7 +152,7 @@ def format_command(config, command, line_width):
         else:
             lines = [command_start + lines_a[0]]
             indent_str = ' '*len(command_start)
-            for line in lines_a:
+            for line in lines_a[1:]:
                 lines.append(indent_str + line)
             if(len(lines[-1]) < line_width):
                 lines[-1] += ')'

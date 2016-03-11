@@ -5,16 +5,15 @@
 
 # This comment should remain right before the command call. Furthermore, the
 # command call should be formatted to a single line.
-foo(arg1
-    arg1
-    arg2
-    arg3
-    arg4
-    arg5)
+foo(arg1 arg2 arg3 arg4 arg5)
+
+foo(arg1,
+    arg2,
+    arg3,
+    arg4)
 
 # This very long command should be split to multiple lines
 foo(very_long_argument1
-    very_long_argument1
     very_long_argument2
     very_long_argument3
     very_long_argument4
@@ -23,13 +22,11 @@ foo(very_long_argument1
 
 # The string in this command should not be split
 foo(very_long_argument1
-    very_long_argument1
     very_long_argumetn2
     very_long_argument3
     "This is a string that should not be split into multiple lines")
 
 foo(very_long_argument1
-    very_long_argument1
     very_long_argument2
     arg3)
 
@@ -53,13 +50,10 @@ foo(very_long_argument1
 # TODO(josh): This todo should not be joined with the previous line. Also this
 # NOTE(josh): should not be joined either.
 
-if(something
-   something)
-  if(something_else
-     something_else)
+if(something)
+  if(something_else)
     # This comment is in-scope.
     foo(arg1,
-        arg1,
         arg2
         arg3)
   endif()
@@ -67,7 +61,6 @@ endif()
 
 # This very long command should be broken up along keyword arguments
 foo(some_thing
-    some_thing
     HEADERS
     foo.h
     bar.h
