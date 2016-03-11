@@ -99,87 +99,64 @@ def format_args_old(chars_available, args):
     return lines
 
 
-def write_block(outfile, indent, lines, skip_first=True):
-    indent_str = ' '*indent
+def format_args(line_width, args):
+    """Format arguments into a block with at most line_width chars."""
+    return [arg.contents for arg in args]
+
+def format_command(config, command, line_width):
+    """Formats a cmake command call into a block with at most line_width chars.
+       Returns a list of lines."""
+
+    
+    command_start = command.name + '('
+
+    # If there are no args then return just the command
+    if len(command.body) < 1:
+        return [command_start + ')']
+    else:
+        # Format args into a block that is aligned with the end of the 
+        # parenthesis after the command name
+        lines_a = format_args(line_width - len(command_start), command.body)
+
+        # Format args into a block that is aligned with the command start
+        # plus one tab size
+        lines_b = format_args(line_width - config.tab_size, command.body)
+        
+        # TODO(josh) : handle inline comment for the command
+        # If the version aligned with the comand start + indent has *alot*
+        # fewer lines than the version aligned with the command end, then
+        # use this one
+        if len(lines_a) > 4 * len(lines_b):
+            lines = [command_start]
+            indent_str = ' '*config.tab_size
+            for line in lines_b:
+                lines.append(indent_str + line)
+            if(len(lines[-1]) < line_width):
+                lines[-1] += ')'
+            else:
+                lines.append(indent_str[:-1] + ')')
+            
+        # Otherwise use the version that is alinged with the command ending
+        else:
+            lines = [command_start + lines_a[0]]
+            indent_str = ' '*len(command_start)
+            for line in lines_a:
+                lines.append(indent_str + line)
+            if(len(lines[-1]) < line_width):
+                lines[-1] += ')'
+            else:
+                lines.append(indent_str[:-1] + ')')
+    return lines
+
+def write_indented(outfile, indent_str, lines):
     for line in lines:
         outfile.write(indent_str)
         outfile.write(line)
         outfile.write('\n')
 
-def format_args(line_width, args):
-    """Format arguments into a block with at most line_width chars."""
-    return [arg.contents for arg in args]
-
-def pretty_print_command(pretty_printer, command):
-    """Formats a cmake command call"""
-
-    outfile = pretty_printer.outfile
-
-    if command.name in SCOPE_DECREASE:
-        pretty_printer.scope_depth -= 1
-
-    # No matter what, we can go ahead and print the command name. This also helps us figure out
-    # how much space we have for indents
-    scope_indent = (pretty_printer.indent * pretty_printer.scope_depth)
-    scope_indent_str = ' ' * scope_indent
-    outfile.write(scope_indent_str)
-    outfile.write(command.name)
-    outfile.write('(')
-
-    if command.name in SCOPE_INCREASE:
-        pretty_printer.scope_depth += 1
-
-    # If there are no args then just print the command
-    if len(command.body) < 1:
-        pretty_printer.outfile.write(')\n')
-    else:
-        # If the whole thing doesn't fit on one line, then try to break arguments 
-        # onto new lines
-        lines_a = format_args(pretty_printer.line_width - len(command.name) - 1, 
-                              command.body)
-        lines_b = format_args(pretty_printer.line_width - scope_indent - 4, 
-                              command.body)
-        # TODO(josh) : handle inline comment for the command
-        if len(lines_a) > 4 * len(lines_b):
-            indent = scope_indent + 4
-            indent_str = ' '*indent
-            outfile.write('\n')
-            for line in lines_b[:-1]:
-                outfile.write(indent_str)
-                outfile.write(line)
-                outfile.write('\n')
-            line = lines_b[-1]
-            outfile.write(indent_str)
-            outfile.write(line)
-            if len(line) + len(indent_str) + 1 > pretty_printer.line_width:
-                outfile.write('\n')
-                outfile.write(indent_str[:-1])
-            outfile.write(')\n')
-
-        else:
-            indent = scope_indent + len(command.name) + len('(')
-            indent_str = ' '*indent
-
-            outfile.write(lines_b[0])
-            outfile.write('\n')
-            for line in lines_b[1:-1]:
-                outfile.write(indent_str)
-                outfile.write(line)
-                outfile.write('\n')
-            line = lines_b[-1]
-            outfile.write(indent_str)
-            outfile.write(line)
-            if len(line) + len(scope_indent_str) + 1 > pretty_printer.line_width:
-                outfile.write('\n')
-                outfile.write(indent_str[:-1])
-            outfile.write(')\n')
-
-# TODO(josh): handle comment at end of argument line
-
-    if command.name in SCOPE_DECREASE:
-        pretty_printer.scope_depth -= 1
-
 class PrettyPrinter(object):
+    """Manages state during processing of file lines. Accumulates newlines and
+       comment lines so that they can be reflowed / reformatted as text."""
 
     def __init__(self, config, outfile):
         self.config = config
@@ -211,7 +188,18 @@ class PrettyPrinter(object):
         elif isinstance(part, cmp._Command):
             self.flush_comment()
             self.flush_blanks()
-            pretty_print_command(self, part)
+            command = part
+            if command.name in SCOPE_DECREASE:
+                self.scope_depth -= 1
+
+            indent_str = ' '*(self.config.tab_size*self.scope_depth)
+            lines = format_command(self.config, command, 
+                                   self.config.line_width - len(indent_str))
+            write_indented(self.outfile, indent_str, lines)
+
+            if command.name in SCOPE_INCREASE:
+                self.scope_depth += 1
+
         else:
             raise ValueError('Unrecognized parse type {}'.format(type(part)))
 
