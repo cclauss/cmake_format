@@ -30,7 +30,7 @@ def build_attr_dict_r(regular_dict):
             attr_dict[key] = value
     return attr_dict
 
-def pretty_print_comment_block(pretty_printer, comment_lines):
+def format_comment_block(config, line_width, comment_lines):
     stripped_lines = [line[1:].strip() for line in comment_lines]
 
     paragraph_lines = list()
@@ -51,20 +51,19 @@ def pretty_print_comment_block(pretty_printer, comment_lines):
     if paragraph_lines:
         paragraphs.append(' '.join(paragraph_lines))
 
+    lines = []
     for paragraph_text in paragraphs:
         if not paragraph_text:
-            pretty_printer.outfile.write('#\n')
+            lines.append('#')
             continue
-        indent = ' ' * (pretty_printer.indent * pretty_printer.scope_depth) + '# '
-        wrapper = textwrap.TextWrapper(width=pretty_printer.line_width,
+        wrapper = textwrap.TextWrapper(width=line_width,
                                        expand_tabs=True,
                                        replace_whitespace=True,
                                        drop_whitespace=True,
-                                       initial_indent=indent,
-                                       subsequent_indent=indent)
-        pretty_printer.outfile.write(wrapper.fill(paragraph_text))
-        pretty_printer.outfile.write('\n')
-
+                                       initial_indent='# ',
+                                       subsequent_indent='# ')
+        lines.extend(wrapper.wrap(paragraph_text))
+    return lines
 
 def format_args_old(chars_available, args):
     # Now split the arguments into groups based on KWARGS which are identified by all caps
@@ -174,7 +173,12 @@ class PrettyPrinter(object):
 
     def flush_comment(self):
         if self.comment_parts:
-            pretty_print_comment_block(self, self.comment_parts)
+            indent_str = ' '*(self.config.tab_size*self.scope_depth)
+            lines = format_comment_block(self.config, 
+                                         self.config.line_width 
+                                            - len(indent_str), 
+                                         self.comment_parts)
+            write_indented(self.outfile, indent_str, lines)
             self.comment_parts = list()
 
     def consume_part(self, part):

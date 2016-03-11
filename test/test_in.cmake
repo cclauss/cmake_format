@@ -45,6 +45,7 @@ foo(very_long_argument1 very_long_argument2 # This comment should be preserved, 
 
 if(something)
 if(something_else)
+# This comment is in-scope.
 foo(arg1, arg2 # this is a comment for arg2
                # this is more comment for arg2, it should be joined with the first.
     arg3)

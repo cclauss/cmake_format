@@ -57,6 +57,7 @@ if(something
    something)
   if(something_else
      something_else)
+    # This comment is in-scope.
     foo(arg1,
         arg1,
         arg2
