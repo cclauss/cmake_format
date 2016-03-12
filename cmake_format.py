@@ -136,6 +136,24 @@ def format_arglist(config, line_width, args):
         indent_str = ''
         lines = ['']
 
+    # if the there are "lots" of arguments in the list, put one per line,
+    # but we can't reuse the logic below since we do want to append to the
+    # first line.
+    if len(args) > config.max_subargs_per_line:
+        first_lines = format_single_arg(config, line_width - len(indent_str), 
+                                        args[0])
+        if len(lines[-1]) > 0:
+            lines[-1] += ' '
+        lines[-1] += first_lines[0]
+        for line in first_lines[1:]:
+            lines.append(indent_str + line)
+        for arg in args[1:]:
+            for line in format_single_arg(config, 
+                                          line_width - len(indent_str), arg):
+                lines.append(indent_str + line)
+        return lines
+
+
     for arg in args:
         # Lines to add if we were to put the arg at the end of the current
         # line.
