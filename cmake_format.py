@@ -2,7 +2,7 @@
 
 import argparse
 import cmakelists_parsing.parsing as cmparse
-import json
+import yaml
 import re
 import shutil
 import sys
@@ -342,8 +342,11 @@ def process_file(config, infile, outfile):
 def merge_config(merge_into, merge_from):
     """Recursively merge dictionary from-to."""
     for key, value in merge_into.iteritems():
-        if isinstance(value, AttrDict):
-            merge_into[key] = merge_config(value, merge_from)
+        if key in merge_from:
+            if isinstance(value, AttrDict):
+                merge_into[key] = merge_config(value, merge_from)
+            else:
+                merge_into[key] = type(merge_into[key])(merge_from[key])
 
 def main():
     """Parse arguments, open files, start work."""
@@ -351,14 +354,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('-i', '--in-place', action='store_true')
     parser.add_argument('-o', '--outfile-path', default='-')
-        parser.add_argument('-c', '--config-file', help='path to json config')
+    parser.add_argument('-c', '--config-file', help='path to json config')
     parser.add_argument('infilepaths', nargs='+')
     args = parser.parse_args()
 
     config = DEFAULT_CONFIG
     if args.config_file:
-        with open(args.config_file, 'r') as config:
-            config_dict = json.load(config)
+        with open(args.config_file, 'r') as config_file:
+            config_dict = yaml.load(config_file)
         merge_config(config, config_dict)
 
     for infile_path in args.infilepaths:
