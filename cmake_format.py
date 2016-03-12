@@ -2,6 +2,7 @@
 
 import argparse
 import cmakelists_parsing.parsing as cmparse
+import json
 import re
 import shutil
 import sys
@@ -338,6 +339,11 @@ def process_file(config, infile, outfile):
         parsed_listfile = cmparse.parse(format_me)
         pretty_printer.consume_parts(parsed_listfile)
 
+def merge_config(merge_into, merge_from):
+    """Recursively merge dictionary from-to."""
+    for key, value in merge_into.iteritems():
+        if isinstance(value, AttrDict):
+            merge_into[key] = merge_config(value, merge_from)
 
 def main():
     """Parse arguments, open files, start work."""
@@ -345,15 +351,15 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('-i', '--in-place', action='store_true')
     parser.add_argument('-o', '--outfile-path', default='-')
-    parser.add_argument('-w', '--line-width', type=int, default=80)
-    parser.add_argument('-t', '--tab-size', type=int, default=2)
+        parser.add_argument('-c', '--config-file', help='path to json config')
     parser.add_argument('infilepaths', nargs='+')
     args = parser.parse_args()
 
-    # pylint: disable=attribute-defined-outside-init
     config = DEFAULT_CONFIG
-    config.line_width = args.line_width
-    config.tab_size = args.tab_size
+    if args.config_file:
+        with open(args.config_file, 'r') as config:
+            config_dict = json.load(config)
+        merge_config(config, config_dict)
 
     for infile_path in args.infilepaths:
         if args.in_place:
