@@ -340,6 +340,7 @@ def process_file(config, infile, outfile):
 
 def merge_config(merge_into, merge_from):
     """Recursively merge dictionary from-to."""
+
     for key, value in merge_into.iteritems():
         if key in merge_from:
             if isinstance(value, AttrDict):
