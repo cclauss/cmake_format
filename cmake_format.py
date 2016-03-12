@@ -2,13 +2,12 @@
 
 import argparse
 import cmakelists_parsing.parsing as cmparse
-import yaml
 import re
 import shutil
 import sys
 import tempfile
 import textwrap
-
+import yaml
 
 class AttrDict(dict):
     """Access elements of a dictionary as attributes."""
@@ -344,9 +343,10 @@ def merge_config(merge_into, merge_from):
     for key, value in merge_into.iteritems():
         if key in merge_from:
             if isinstance(value, AttrDict):
-                merge_into[key] = merge_config(value, merge_from)
+                merge_config(value, merge_from[key])
             else:
                 merge_into[key] = type(merge_into[key])(merge_from[key])
+
 
 def main():
     """Parse arguments, open files, start work."""
