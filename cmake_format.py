@@ -31,6 +31,9 @@ SCOPE_INCREASE = ['if', 'foreach', 'while', 'function', 'macro']
 SCOPE_DECREASE = ['endif', 'endforeach', 'endwhile', 'endfunction', 'endmacro']
 
 NOTE_REGEX = re.compile(r'^[A-Z_]+\([^)]+\):.*')
+
+# TODO(josh): some KWARGS don't take parameters, and these we want to treat
+# differently.
 KWARG_REGEX = re.compile(r'[A-Z0-9_]+')
 
 DEFAULT_CONFIG = build_attr_dict_r(dict(
@@ -193,6 +196,11 @@ def format_args(config, line_width, args):
     arg_multilist = split_args_by_kwargs(args)
     for arg_sublist in arg_multilist:
         sublist_lines = format_arglist(config, line_width, arg_sublist)
+
+        # TODO(josh): look for cases where we can append to current line.
+        # for instance PROPERTIES COMPILE_FLAGS, PROPERTIES can go on
+        # previous line but COMPILE_FLAGS cannot insce it starts an
+        # arglist
         lines.extend(sublist_lines)
     return lines
 
@@ -218,9 +226,12 @@ def format_command(config, command, line_width):
                               line_width - config.tab_size, command.body)
 
         # TODO(josh) : handle inline comment for the command
+
         # If the version aligned with the comand start + indent has *alot*
         # fewer lines than the version aligned with the command end, then
         # use this one
+        # TODO(josh) : choose second option also if first option exceeds
+        # line_width
         if len(lines_a) > 4 * len(lines_b):
             lines = [command_start]
             indent_str = ' ' * config.tab_size
