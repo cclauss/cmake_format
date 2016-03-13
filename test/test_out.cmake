@@ -34,9 +34,8 @@ some_long_command_name(
 
 # This situation is similar but the argument to a KWARG needs to be on a newline
 # instead.
-set(
-  CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wno-sign-compare -Wno-unused-parameter -xx"
- )
+set(CMAKE_CXX_FLAGS
+      "-std=c++11 -Wall -Wno-sign-compare -Wno-unused-parameter -xx")
 
 set(HEADERS header_a.h
             header_b.h # This comment should be preserved, moreover it should be

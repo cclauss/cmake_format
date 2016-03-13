@@ -42,6 +42,10 @@ DEFAULT_CONFIG = build_attr_dict_r(dict(
     max_subargs_per_line=3,
 ))
 
+def indent_list(indent_str, lines):
+    """Return a list of lines where indent_str is prepended to everything in
+       lines."""
+    return [indent_str + line for line in lines]
 
 def format_comment_block(config, line_width, comment_lines):
     """Reflow a comment block into the given line_width. Return a list of
@@ -135,12 +139,34 @@ def format_arglist(config, line_width, command_name, args):
 
     if is_kwarg(command_name, args[0]):
         kwarg = args[0].contents
-        lines = [kwarg]
-        indent_str = ' ' * (len(kwarg) + 1)
-        args.pop(0)
-    else:
-        indent_str = ''
-        lines = ['']
+
+        if len(args) == 1:
+            return [kwarg]
+
+        aligned_indent_str = ' ' * (len(kwarg) + 1)
+        tabbed_indent_str = ' ' * config.tab_size
+        
+        # Lines to append if we put them aligned with the end of the kwarg
+        lines_aligned = format_arglist(config, 
+                                       line_width - len(aligned_indent_str), 
+                                       command_name, args[1:])
+
+        # Lines to append if we put them on lines after the kwarg and indented
+        # one block higher
+        lines_tabbed = format_arglist(config, 
+                                      line_width - len(tabbed_indent_str),
+                                      command_name, args[1:])
+
+        # If aligned doesn't fit, then use tabbed
+        if (get_block_width(lines_aligned) 
+                > line_width - len(aligned_indent_str)):
+            return [kwarg] + indent_list(tabbed_indent_str, lines_tabbed)
+        else:
+            return ([kwarg + ' ' + lines_aligned[0]]
+                    + indent_list(aligned_indent_str, lines_aligned[1:])) 
+
+    indent_str = ''
+    lines = ['']
 
     # TODO(josh): if aligning after the KWARG exeeds line with, then move one
     # line below and align to the start + one indent.
