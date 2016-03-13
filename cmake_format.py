@@ -80,13 +80,16 @@ def format_comment_block(config, line_width, comment_lines):
         lines.extend(wrapper.wrap(paragraph_text))
     return lines
 
+def is_kwarg(command_name, arg):
+    """Return true if the given argument is a kwarg."""
+    return KWARG_REGEX.match(arg.contents)
 
-def split_args_by_kwargs(args):
+def split_args_by_kwargs(command_name, args):
     """Takes in a list of arguments and returns a lists of lists. Each sublist
        starts with a kwarg (ALL_CAPS) and contains only non-kwargs after."""
     arg_split = [[]]
     for arg in args:
-        if KWARG_REGEX.match(arg.contents):
+        if is_kwarg(command_name, arg):
             arg_split.append([])
         arg_split[-1].append(arg)
 
@@ -124,13 +127,13 @@ def format_single_arg(config, line_width, arg):
         return [arg.contents]
 
 
-def format_arglist(config, line_width, args):
+def format_arglist(config, line_width, command_name, args):
     """Given a list arguments containing at most one KWARG (in position [0]
        if it exists), format into a list of lines."""
     if len(args) < 1:
         return []
 
-    if KWARG_REGEX.match(args[0].contents):
+    if is_kwarg(command_name, args[0]):
         kwarg = args[0].contents
         lines = [kwarg]
         indent_str = ' ' * (len(kwarg) + 1)
@@ -188,7 +191,7 @@ def format_arglist(config, line_width, args):
     return lines
 
 
-def format_args(config, line_width, args):
+def format_args(config, line_width, command_name, args):
     """Format arguments into a block with at most line_width chars."""
     if not arg_exists_with_comment(args):
         single_line = ' '.join([arg.contents for arg in args])
@@ -196,9 +199,10 @@ def format_args(config, line_width, args):
             return [single_line]
 
     lines = []
-    arg_multilist = split_args_by_kwargs(args)
+    arg_multilist = split_args_by_kwargs(command_name, args)
     for arg_sublist in arg_multilist:
-        sublist_lines = format_arglist(config, line_width, arg_sublist)
+        sublist_lines = format_arglist(config, line_width, command_name, 
+                                       arg_sublist)
 
         # TODO(josh): look for cases where we can append to current line.
         # for instance PROPERTIES COMPILE_FLAGS, PROPERTIES can go on
@@ -224,12 +228,13 @@ def format_command(config, command, line_width):
         # Format args into a block that is aligned with the end of the
         # parenthesis after the command name
         lines_a = format_args(config, line_width - len(command_start),
-                              command.body)
+                              command.name, command.body)
 
         # Format args into a block that is aligned with the command start
         # plus one tab size
         lines_b = format_args(config,
-                              line_width - config.tab_size, command.body)
+                              line_width - config.tab_size, 
+                              command.name, command.body)
 
         # TODO(josh) : handle inline comment for the command
 
