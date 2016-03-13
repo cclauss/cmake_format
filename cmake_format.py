@@ -2,6 +2,7 @@
 
 import argparse
 import cmakelists_parsing.parsing as cmparse
+import collections
 import re
 import shutil
 import sys
@@ -36,10 +37,29 @@ NOTE_REGEX = re.compile(r'^[A-Z_]+\([^)]+\):.*')
 # differently.
 KWARG_REGEX = re.compile(r'[A-Z0-9_]+')
 
+# Maps command name to flag args, which are like kwargs but don't take
+# subargument lists
+FLAG_MAP = {
+    
+}
+
+# Maps command names to lists of kwargs
+# Comands that don't take KWARGS are:
+#   add_library
+#   add_subdirectory
+#   if
+#   else
+#   endif
+KWARG_MAP = collections.defaultdict(list, {
+    'set' : ['CACHE'],
+    'set_target_properties' : ['PROPERTIES'],
+})
+
 DEFAULT_CONFIG = build_attr_dict_r(dict(
     line_width=80,
     tab_size=2,
     max_subargs_per_line=3,
+    additional_kwargs = dict()
 ))
 
 def indent_list(indent_str, lines):
