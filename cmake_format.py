@@ -139,6 +139,9 @@ def format_arglist(config, line_width, args):
         indent_str = ''
         lines = ['']
 
+    # TODO(josh): if aligning after the KWARG exeeds line with, then move one
+    # line below and align to the start + one indent.
+
     # if the there are "lots" of arguments in the list, put one per line,
     # but we can't reuse the logic below since we do want to append to the
     # first line.
@@ -204,6 +207,9 @@ def format_args(config, line_width, args):
         lines.extend(sublist_lines)
     return lines
 
+def get_block_width(lines):
+    """Return the max width of any line within the list of lines."""
+    return max(len(line) for line in lines)
 
 def format_command(config, command, line_width):
     """Formats a cmake command call into a block with at most line_width chars.
@@ -229,10 +235,9 @@ def format_command(config, command, line_width):
 
         # If the version aligned with the comand start + indent has *alot*
         # fewer lines than the version aligned with the command end, then
-        # use this one
-        # TODO(josh) : choose second option also if first option exceeds
-        # line_width
-        if len(lines_a) > 4 * len(lines_b):
+        # use this one. Also use it if the first option exceeds line width.
+        if (len(lines_a) > 4 * len(lines_b) 
+            or get_block_width(lines_a) > line_width - len(command_start)):
             lines = [command_start]
             indent_str = ' ' * config.tab_size
             for line in lines_b:

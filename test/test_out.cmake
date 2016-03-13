@@ -26,9 +26,17 @@ set(SOURCES source_a.cc
 set_target_properties(foo bar baz
                       PROPERTIES
                       COMPILE_FLAGS "-std=c++11 -Wall -Wextra")
-set(CMAKE_CXX_FLAGS
-                    "-std=c++11 -Wall -Wextra -Wno-sign-compare -Wno-unused-parameter"
-   )
+
+# This command has a very long argument and can't be aligned with the command
+# end, so it should be moved to a new line with block indent + 1.
+some_long_command_name(
+  "Some very long argument that really needs to be on the next line.")
+
+# This situation is similar but the argument to a KWARG needs to be on a newline
+# instead.
+set(
+  CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wno-sign-compare -Wno-unused-parameter -xx"
+ )
 
 set(HEADERS header_a.h
             header_b.h # This comment should be preserved, moreover it should be
