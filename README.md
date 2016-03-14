@@ -4,7 +4,7 @@ Can format your cmake files nicely so that they don't look like crap.
 
 ## Usage
 
-~~~
+~~~.txt
 usage: cmake_format.py [-h] [-i] [-o OUTFILE_PATH] [-c CONFIG_FILE]
                        infilepaths [infilepaths ...]
 
@@ -17,8 +17,9 @@ optional arguments:
   -h, --help            show this help message and exit
   -i, --in-place
   -o OUTFILE_PATH, --outfile-path OUTFILE_PATH
+                        Where to write the formatted file. Default is stdout.
   -c CONFIG_FILE, --config-file CONFIG_FILE
-                        path to json config
+                        path to yaml config
 ~~~
 
 ## Configuration
