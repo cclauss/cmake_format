@@ -41,6 +41,10 @@ KWARG_REGEX = re.compile(r'[A-Z0-9_]+')
 DEFAULT_CONFIG = build_attr_dict_r(dict(
     line_width=80,
     tab_size=2,
+    # TODO(josh): make this conditioned on certain commands / kwargs
+    # because things like execute_process(COMMAND...) are less readable
+    # formatted as a single list. In fact... special case COMMAND to break on
+    # flags the way we do kwargs.
     max_subargs_per_line=3,
     additional_flags=dict(),
     additional_kwargs=dict(),
