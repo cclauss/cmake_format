@@ -38,6 +38,14 @@ NOTE_REGEX = re.compile(r'^[A-Z_]+\([^)]+\):.*')
 # differently.
 KWARG_REGEX = re.compile(r'[A-Z0-9_]+')
 
+DEFAULT_CONFIG = build_attr_dict_r(dict(
+    line_width=80,
+    tab_size=2,
+    max_subargs_per_line=3,
+    additional_flags=dict(),
+    additional_kwargs=dict(),
+))
+
 # Maps command name to flag args, which are like kwargs but don't take',
 # subargument lists
 FLAG_MAP = {
@@ -385,13 +393,6 @@ KWARG_MAP = collections.defaultdict(list, {
          'ARGS']
 })
 
-DEFAULT_CONFIG = build_attr_dict_r(dict(
-    line_width=80,
-    tab_size=2,
-    max_subargs_per_line=3,
-    additional_kwargs=dict()
-))
-
 
 def indent_list(indent_str, lines):
     """Return a list of lines where indent_str is prepended to everything in
@@ -448,7 +449,7 @@ def is_kwarg(command_name, arg):
     """Return true if the given argument is a kwarg."""
     if command_name in KWARG_MAP:
         return arg.contents in KWARG_MAP[command_name]
-    return KWARG_REGEX.match(arg.contents)
+    return False
 
 
 def split_args_by_kwargs(command_name, args):
@@ -776,9 +777,13 @@ def merge_config(merge_into, merge_from):
     for key, value in merge_into.iteritems():
         if key in merge_from:
             if isinstance(value, AttrDict):
+                print('Recursing {}'.format(key))
                 merge_config(value, merge_from[key])
             else:
+                print('Merging {}'.format(key))
                 merge_into[key] = type(merge_into[key])(merge_from[key])
+        else:
+            print('Keeping {}'.format(key))
 
 
 def main():
@@ -796,6 +801,9 @@ def main():
         with open(args.config_file, 'r') as config_file:
             config_dict = yaml.load(config_file)
         merge_config(config, config_dict)
+
+    FLAG_MAP.update(config_dict.get('additional_flags'))
+    KWARG_MAP.update(config_dict.get('additional_kwargs'))
 
     for infile_path in args.infilepaths:
         if args.in_place:
