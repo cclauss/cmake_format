@@ -158,7 +158,7 @@ FLAG_MAP = {
     'mark_as_advanced':
         ['CLEAR',
          'FORCE'],
-    'get_property':
+    'set_property':
         ['GLOBAL',
          'APPEND',
          'APPEND_STRING'],
@@ -454,14 +454,14 @@ def is_kwarg(command_name, arg):
 
 def split_args_by_kwargs(command_name, args):
     """Takes in a list of arguments and returns a list of lists. Each sublist
-       is either a list of positional arguments, a list containg a kwarg 
+       is either a list of positional arguments, a list containg a kwarg
        followed by it's sub arguments, or a list containing a consecutive
        sequence of flags."""
     arg_split = [[]]
     for arg in args:
         if is_flag(command_name, arg):
             if len(arg_split[-1]) > 0:
-                if not is_flag(arg_split[-1][-1]):
+                if not is_flag(command_name, arg_split[-1][-1]):
                     arg_split.append([])
         elif is_kwarg(command_name, arg):
             if len(arg_split[-1]) > 0:
@@ -777,22 +777,19 @@ def merge_config(merge_into, merge_from):
     for key, value in merge_into.iteritems():
         if key in merge_from:
             if isinstance(value, AttrDict):
-                print('Recursing {}'.format(key))
                 merge_config(value, merge_from[key])
             else:
-                print('Merging {}'.format(key))
                 merge_into[key] = type(merge_into[key])(merge_from[key])
-        else:
-            print('Keeping {}'.format(key))
-
 
 def main():
     """Parse arguments, open files, start work."""
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('-i', '--in-place', action='store_true')
-    parser.add_argument('-o', '--outfile-path', default='-')
-    parser.add_argument('-c', '--config-file', help='path to json config')
+    parser.add_argument('-o', '--outfile-path', default='-',
+                        help='Where to write the formatted file. '
+                             'Default is stdout.')
+    parser.add_argument('-c', '--config-file', help='path to yaml config')
     parser.add_argument('infilepaths', nargs='+')
     args = parser.parse_args()
 
