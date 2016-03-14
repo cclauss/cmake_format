@@ -129,11 +129,11 @@ FLAG_MAP = {
          'ONLY_CMAKE_FIND_ROOT_PATH',
          'NO_CMAKE_FIND_ROOT_PATH'],
     'get_property':
-        ['GLOBAL', 
-         'VARIABLE', 
-         'SET', 
-         'DEFINED', 
-         'BRIEF_DOCS', 
+        ['GLOBAL',
+         'VARIABLE',
+         'SET',
+         'DEFINED',
+         'BRIEF_DOCS',
          'FULL_DOCS'],
     'include_directories':
         ['AFTER',
@@ -151,7 +151,7 @@ FLAG_MAP = {
         ['CLEAR',
          'FORCE'],
     'get_property':
-        ['GLOBAL', 
+        ['GLOBAL',
          'APPEND',
          'APPEND_STRING'],
     'set':
