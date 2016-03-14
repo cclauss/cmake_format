@@ -37,22 +37,94 @@ NOTE_REGEX = re.compile(r'^[A-Z_]+\([^)]+\):.*')
 # differently.
 KWARG_REGEX = re.compile(r'[A-Z0-9_]+')
 
-# Maps command name to flag args, which are like kwargs but don't take
+# Maps command name to flag args, which are like kwargs but don't take', 
 # subargument lists
 FLAG_MAP = {
-    
+    'add_custom_command' : 
+        ['APPEND', 
+         'VERBATIM'],
+    'add_custom_target' : 
+        ['ALL', 
+         'VERBATIM'],
+    'add_executable' : 
+        ['WIN32', 
+         'MACOSX_BUNDLE', 
+         'EXCLUDE_FROM_ALL'],
+    'add_library' : 
+        ['STATIC', 
+         'SHARED', 
+         'MODULE', 
+         'EXCLUDE_FROM_ALL'],
+    'cmake_minimum_required' : 
+        ['FATAL_ERROR'],
+    'configure_file':
+        ['COPYONLY', 
+         'ESCAPE_QUOTES', 
+         '@ONLY'],
+    'define_property' :
+        ['GLOBAL',
+         'DIRECTORY',
+         'TARGET',
+         'SOURCE',
+         'TEST',
+         'VARIABLE',
+         'CACHED_VARIABLE',
+         'INHERITED'],
+    'enable_language' :
+        ['OPTIONAL'],
+    'execute_process' :
+        ['OUTPUT_QUIET', 
+         'ERROR_QUIET', 
+         'OUTPUT_STRIP_TRAILING_WHITESPACE',
+         'ERROR_STRIP_TRAILING_WHITESPACE']
 }
 
 # Maps command names to lists of kwargs
-# Comands that don't take KWARGS are:
-#   add_library
-#   add_subdirectory
-#   if
-#   else
-#   endif
 KWARG_MAP = collections.defaultdict(list, {
-    'set' : ['CACHE'],
-    'set_target_properties' : ['PROPERTIES'],
+    'add_custom_command' : 
+        ['OUTPUT', 
+         'COMMAND', 
+         'MAIN_DEPENDENCY', 
+         'DEPENDS', 
+         'IMPLICIT_DEPENDS', 
+         'WORKING_DIRECTORY', 
+         'COMMENT'],
+    'add_custom_target' : 
+        ['COMMAND', 
+         'DEPENDS', 
+         'WORKING_DIRECTORY', 
+         'COMMENT', 
+         'SOURCES'],
+    'add_test' : 
+        ['NAME', 
+         'COMMAND', 
+         'CONFIGURATIONS', 
+         'WORKING_DIRECTORY'],
+    'cmake_host_system_information' : 
+        ['RESULT', 
+         'QUERY'],
+    'cmake_minimum_required_version' : 
+        ['VERSION'],
+    'configure_file' : 
+        ['NEWLINE_STYLE'], 
+    'define_property' :
+        ['PROPERTY',
+         'BRIEF_DOCS',
+         'FULL_DOCS'],
+    'execute_process' : 
+        ['COMMAND',
+         'WORKING_DIRECTORY',
+         'TIMEOUT',
+         'RESULT_VARIABLE',
+         'OUTPUT_VARIABLE',
+         'ERROR_VARIABLE',
+         'INPUT_FILE',
+         'OUTPUT_FILE',
+         'ERROR_FILE'],
+    'set' : 
+        ['CACHE'],
+    'set_target_properties' : 
+        ['PROPERTIES'],
 })
 
 DEFAULT_CONFIG = build_attr_dict_r(dict(
@@ -106,6 +178,8 @@ def format_comment_block(config, line_width, comment_lines):
 
 def is_kwarg(command_name, arg):
     """Return true if the given argument is a kwarg."""
+    if command_name in KWARG_MAP:
+        return arg.contents in KWARG_MAP[command_name]
     return KWARG_REGEX.match(arg.contents)
 
 def split_args_by_kwargs(command_name, args):

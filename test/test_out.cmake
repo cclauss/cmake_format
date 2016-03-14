@@ -10,22 +10,24 @@ project(cmake_format_test)
 add_subdirectories(foo bar baz foo2 bar2 baz2)
 
 # This very long command should be split to multiple lines
-set(HEADERS very_long_header_name_a.h very_long_header_name_b.h
-            very_long_header_name_c.h)
+set(HEADERS
+    very_long_header_name_a.h
+    very_long_header_name_b.h
+    very_long_header_name_c.h)
 
 # This command should be split into one line per entry because it has a long
 # argument list.
-set(SOURCES source_a.cc
-            source_b.cc
-            source_d.cc
-            source_e.cc
-            source_f.cc
-            source_g.cc)
+set(SOURCES
+    source_a.cc
+    source_b.cc
+    source_d.cc
+    source_e.cc
+    source_f.cc
+    source_g.cc)
 
 # The string in this command should not be split
 set_target_properties(foo bar baz
-                      PROPERTIES
-                      COMPILE_FLAGS "-std=c++11 -Wall -Wextra")
+                      PROPERTIES COMPILE_FLAGS "-std=c++11 -Wall -Wextra")
 
 # This command has a very long argument and can't be aligned with the command
 # end, so it should be moved to a new line with block indent + 1.
@@ -35,13 +37,14 @@ some_long_command_name(
 # This situation is similar but the argument to a KWARG needs to be on a newline
 # instead.
 set(CMAKE_CXX_FLAGS
-      "-std=c++11 -Wall -Wno-sign-compare -Wno-unused-parameter -xx")
+    "-std=c++11 -Wall -Wno-sign-compare -Wno-unused-parameter -xx")
 
-set(HEADERS header_a.h
-            header_b.h # This comment should be preserved, moreover it should be
-                       # split across two lines.
-            header_c.h
-            header_d.h)
+set(HEADERS
+    header_a.h
+    header_b.h # This comment should be preserved, moreover it should be split
+               # across two lines.
+    header_c.h
+    header_d.h)
 
 # This part of the comment should be formatted but...
 # cmake_format: off
