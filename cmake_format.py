@@ -10,6 +10,7 @@ import tempfile
 import textwrap
 import yaml
 
+
 class AttrDict(dict):
     """Access elements of a dictionary as attributes."""
 
@@ -37,31 +38,31 @@ NOTE_REGEX = re.compile(r'^[A-Z_]+\([^)]+\):.*')
 # differently.
 KWARG_REGEX = re.compile(r'[A-Z0-9_]+')
 
-# Maps command name to flag args, which are like kwargs but don't take', 
+# Maps command name to flag args, which are like kwargs but don't take',
 # subargument lists
 FLAG_MAP = {
-    'add_custom_command' : 
-        ['APPEND', 
+    'add_custom_command':
+        ['APPEND',
          'VERBATIM'],
-    'add_custom_target' : 
-        ['ALL', 
+    'add_custom_target':
+        ['ALL',
          'VERBATIM'],
-    'add_executable' : 
-        ['WIN32', 
-         'MACOSX_BUNDLE', 
+    'add_executable':
+        ['WIN32',
+         'MACOSX_BUNDLE',
          'EXCLUDE_FROM_ALL'],
-    'add_library' : 
-        ['STATIC', 
-         'SHARED', 
-         'MODULE', 
+    'add_library':
+        ['STATIC',
+         'SHARED',
+         'MODULE',
          'EXCLUDE_FROM_ALL'],
-    'cmake_minimum_required' : 
+    'cmake_minimum_required':
         ['FATAL_ERROR'],
     'configure_file':
-        ['COPYONLY', 
-         'ESCAPE_QUOTES', 
+        ['COPYONLY',
+         'ESCAPE_QUOTES',
          '@ONLY'],
-    'define_property' :
+    'define_property':
         ['GLOBAL',
          'DIRECTORY',
          'TARGET',
@@ -70,48 +71,48 @@ FLAG_MAP = {
          'VARIABLE',
          'CACHED_VARIABLE',
          'INHERITED'],
-    'enable_language' :
+    'enable_language':
         ['OPTIONAL'],
-    'execute_process' :
-        ['OUTPUT_QUIET', 
-         'ERROR_QUIET', 
+    'execute_process':
+        ['OUTPUT_QUIET',
+         'ERROR_QUIET',
          'OUTPUT_STRIP_TRAILING_WHITESPACE',
          'ERROR_STRIP_TRAILING_WHITESPACE']
 }
 
 # Maps command names to lists of kwargs
 KWARG_MAP = collections.defaultdict(list, {
-    'add_custom_command' : 
-        ['OUTPUT', 
-         'COMMAND', 
-         'MAIN_DEPENDENCY', 
-         'DEPENDS', 
-         'IMPLICIT_DEPENDS', 
-         'WORKING_DIRECTORY', 
+    'add_custom_command':
+        ['OUTPUT',
+         'COMMAND',
+         'MAIN_DEPENDENCY',
+         'DEPENDS',
+         'IMPLICIT_DEPENDS',
+         'WORKING_DIRECTORY',
          'COMMENT'],
-    'add_custom_target' : 
-        ['COMMAND', 
-         'DEPENDS', 
-         'WORKING_DIRECTORY', 
-         'COMMENT', 
+    'add_custom_target':
+        ['COMMAND',
+         'DEPENDS',
+         'WORKING_DIRECTORY',
+         'COMMENT',
          'SOURCES'],
-    'add_test' : 
-        ['NAME', 
-         'COMMAND', 
-         'CONFIGURATIONS', 
+    'add_test':
+        ['NAME',
+         'COMMAND',
+         'CONFIGURATIONS',
          'WORKING_DIRECTORY'],
-    'cmake_host_system_information' : 
-        ['RESULT', 
+    'cmake_host_system_information':
+        ['RESULT',
          'QUERY'],
-    'cmake_minimum_required_version' : 
+    'cmake_minimum_required_version':
         ['VERSION'],
-    'configure_file' : 
-        ['NEWLINE_STYLE'], 
-    'define_property' :
+    'configure_file':
+        ['NEWLINE_STYLE'],
+    'define_property':
         ['PROPERTY',
          'BRIEF_DOCS',
          'FULL_DOCS'],
-    'execute_process' : 
+    'execute_process':
         ['COMMAND',
          'WORKING_DIRECTORY',
          'TIMEOUT',
@@ -121,9 +122,9 @@ KWARG_MAP = collections.defaultdict(list, {
          'INPUT_FILE',
          'OUTPUT_FILE',
          'ERROR_FILE'],
-    'set' : 
+    'set':
         ['CACHE'],
-    'set_target_properties' : 
+    'set_target_properties':
         ['PROPERTIES'],
 })
 
@@ -131,13 +132,15 @@ DEFAULT_CONFIG = build_attr_dict_r(dict(
     line_width=80,
     tab_size=2,
     max_subargs_per_line=3,
-    additional_kwargs = dict()
+    additional_kwargs=dict()
 ))
+
 
 def indent_list(indent_str, lines):
     """Return a list of lines where indent_str is prepended to everything in
        lines."""
     return [indent_str + line for line in lines]
+
 
 def format_comment_block(config, line_width, comment_lines):
     """Reflow a comment block into the given line_width. Return a list of
@@ -176,17 +179,20 @@ def format_comment_block(config, line_width, comment_lines):
         lines.extend(wrapper.wrap(paragraph_text))
     return lines
 
+
 def is_flag(command_name, arg):
     """Return true if the given argument is a flag."""
     if command_name in FLAG_MAP:
         return arg.contents in FLAG_MAP[command_name]
     return False
 
+
 def is_kwarg(command_name, arg):
     """Return true if the given argument is a kwarg."""
     if command_name in KWARG_MAP:
         return arg.contents in KWARG_MAP[command_name]
     return KWARG_REGEX.match(arg.contents)
+
 
 def split_args_by_kwargs(command_name, args):
     """Takes in a list of arguments and returns a list of lists. Each sublist
@@ -248,25 +254,25 @@ def format_arglist(config, line_width, command_name, args):
 
         aligned_indent_str = ' ' * (len(kwarg) + 1)
         tabbed_indent_str = ' ' * config.tab_size
-        
+
         # Lines to append if we put them aligned with the end of the kwarg
-        lines_aligned = format_arglist(config, 
-                                       line_width - len(aligned_indent_str), 
+        lines_aligned = format_arglist(config,
+                                       line_width - len(aligned_indent_str),
                                        command_name, args[1:])
 
         # Lines to append if we put them on lines after the kwarg and indented
         # one block higher
-        lines_tabbed = format_arglist(config, 
+        lines_tabbed = format_arglist(config,
                                       line_width - len(tabbed_indent_str),
                                       command_name, args[1:])
 
         # If aligned doesn't fit, then use tabbed
-        if (get_block_width(lines_aligned) 
+        if (get_block_width(lines_aligned)
                 > line_width - len(aligned_indent_str)):
             return [kwarg] + indent_list(tabbed_indent_str, lines_tabbed)
         else:
             return ([kwarg + ' ' + lines_aligned[0]]
-                    + indent_list(aligned_indent_str, lines_aligned[1:])) 
+                    + indent_list(aligned_indent_str, lines_aligned[1:]))
 
     indent_str = ''
     lines = ['']
@@ -278,7 +284,7 @@ def format_arglist(config, line_width, command_name, args):
     # but we can't reuse the logic below since we do want to append to the
     # first line.
     if len(args) > config.max_subargs_per_line:
-        first_lines = format_single_arg(config, line_width - len(indent_str), 
+        first_lines = format_single_arg(config, line_width - len(indent_str),
                                         args[0])
         if len(lines[-1]) > 0:
             lines[-1] += ' '
@@ -286,11 +292,10 @@ def format_arglist(config, line_width, command_name, args):
         for line in first_lines[1:]:
             lines.append(indent_str + line)
         for arg in args[1:]:
-            for line in format_single_arg(config, 
+            for line in format_single_arg(config,
                                           line_width - len(indent_str), arg):
                 lines.append(indent_str + line)
         return lines
-
 
     for arg in args:
         # Lines to add if we were to put the arg at the end of the current
@@ -330,7 +335,7 @@ def format_args(config, line_width, command_name, args):
     lines = []
     arg_multilist = split_args_by_kwargs(command_name, args)
     for arg_sublist in arg_multilist:
-        sublist_lines = format_arglist(config, line_width, command_name, 
+        sublist_lines = format_arglist(config, line_width, command_name,
                                        arg_sublist)
 
         # TODO(josh): look for cases where we can append to current line.
@@ -340,9 +345,11 @@ def format_args(config, line_width, command_name, args):
         lines.extend(sublist_lines)
     return lines
 
+
 def get_block_width(lines):
     """Return the max width of any line within the list of lines."""
     return max(len(line) for line in lines)
+
 
 def format_command(config, command, line_width):
     """Formats a cmake command call into a block with at most line_width chars.
@@ -362,7 +369,7 @@ def format_command(config, command, line_width):
         # Format args into a block that is aligned with the command start
         # plus one tab size
         lines_b = format_args(config,
-                              line_width - config.tab_size, 
+                              line_width - config.tab_size,
                               command.name, command.body)
 
         # TODO(josh) : handle inline comment for the command
@@ -370,8 +377,8 @@ def format_command(config, command, line_width):
         # If the version aligned with the comand start + indent has *alot*
         # fewer lines than the version aligned with the command end, then
         # use this one. Also use it if the first option exceeds line width.
-        if (len(lines_a) > 4 * len(lines_b) 
-            or get_block_width(lines_a) > line_width - len(command_start)):
+        if (len(lines_a) > 4 * len(lines_b)
+                or get_block_width(lines_a) > line_width - len(command_start)):
             lines = [command_start]
             indent_str = ' ' * config.tab_size
             for line in lines_b:
@@ -445,8 +452,7 @@ class PrettyPrinter(object):
             self.flush_blanks()
             self.comment_parts.append(part)
 
-
-        elif isinstance(part, cmparse._Command): # pylint: disable=protected-access
+        elif isinstance(part, cmparse._Command):  # pylint: disable=protected-access
             self.flush_comment()
             self.flush_blanks()
             command = part
@@ -505,6 +511,7 @@ def process_file(config, infile, outfile):
     if format_me:
         parsed_listfile = cmparse.parse(format_me)
         pretty_printer.consume_parts(parsed_listfile)
+
 
 def merge_config(merge_into, merge_from):
     """Recursively merge dictionary from-to."""
