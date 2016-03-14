@@ -411,7 +411,8 @@ def format_comment_block(config, line_width, comment_lines):
     # the start of a TODO(...): or NOTE(...):
     for line in stripped_lines:
         if NOTE_REGEX.match(line):
-            paragraphs.append(' '.join(paragraph_lines))
+            if paragraph_lines:
+                paragraphs.append(' '.join(paragraph_lines))
             paragraph_lines = [line]
         elif line:
             paragraph_lines.append(line)
