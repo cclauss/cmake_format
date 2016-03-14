@@ -176,6 +176,12 @@ def format_comment_block(config, line_width, comment_lines):
         lines.extend(wrapper.wrap(paragraph_text))
     return lines
 
+def is_flag(command_name, arg):
+    """Return true if the given argument is a flag."""
+    if command_name in FLAG_MAP:
+        return arg.contents in FLAG_MAP[command_name]
+    return False
+
 def is_kwarg(command_name, arg):
     """Return true if the given argument is a kwarg."""
     if command_name in KWARG_MAP:
@@ -183,17 +189,20 @@ def is_kwarg(command_name, arg):
     return KWARG_REGEX.match(arg.contents)
 
 def split_args_by_kwargs(command_name, args):
-    """Takes in a list of arguments and returns a lists of lists. Each sublist
-       starts with a kwarg (ALL_CAPS) and contains only non-kwargs after."""
+    """Takes in a list of arguments and returns a list of lists. Each sublist
+       is either a list of positional arguments, a list containg a kwarg 
+       followed by it's sub arguments, or a list containing a consecutive
+       sequence of flags."""
     arg_split = [[]]
     for arg in args:
-        if is_kwarg(command_name, arg):
-            arg_split.append([])
+        if is_flag(command_name, arg):
+            if len(arg_split[-1]) > 0:
+                if not is_flag(arg_split[-1][-1]):
+                    arg_split.append([])
+        elif is_kwarg(command_name, arg):
+            if len(arg_split[-1]) > 0:
+                arg_split.append([])
         arg_split[-1].append(arg)
-
-    # If there are no initial non-kwargs then remove that sublist
-    if not arg_split[0]:
-        arg_split.pop(0)
 
     return arg_split
 
