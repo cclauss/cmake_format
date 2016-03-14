@@ -818,6 +818,7 @@ def main():
                 process_file(config, infile, outfile)
         except:
             parse_ok = False
+            sys.stderr.write('While processing {}\n'.format(infile_path))
             raise
         finally:
             if args.in_place:
