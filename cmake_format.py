@@ -727,8 +727,6 @@ def format_command(config, command, line_width):
                               line_width - config.tab_size,
                               command.name, command.body)
 
-        # TODO(josh) : handle inline comment for the command
-
         # If the version aligned with the comand start + indent has *alot*
         # fewer lines than the version aligned with the command end, then
         # use this one. Also use it if the first option exceeds line width.
@@ -753,6 +751,21 @@ def format_command(config, command, line_width):
                 lines[-1] += ')'
             else:
                 lines.append(indent_str[:-1] + ')')
+
+        if command.comment:
+            comment_lines_append = format_comment_block(config,
+                line_width - len(lines[-1]) - 1, [command.comment])
+
+            comment_lines_extend = format_comment_block(config, line_width,
+                                                        [command.comment])
+
+            if len(comment_lines_append) < 4 * len(comment_lines_extend):
+                append_indent = ' ' * (len(lines[-1]) + 1)
+                lines[-1] += ' ' + comment_lines_append[0]
+                lines.extend(indent_list(append_indent,
+                                         comment_lines_append[1:]))
+            else:
+                lines.extend(comment_lines_extend)
     return lines
 
 
