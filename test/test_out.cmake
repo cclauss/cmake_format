@@ -26,18 +26,20 @@ set(SOURCES
     source_g.cc)
 
 # The string in this command should not be split
-set_target_properties(foo bar baz
-                      PROPERTIES COMPILE_FLAGS "-std=c++11 -Wall -Wextra")
+set_target_properties(
+  foo bar baz
+  PROPERTIES
+    COMPILE_FLAGS
+    "-std=c++11 -Wall -Wextra")
 
 # This command has a very long argument and can't be aligned with the command
 # end, so it should be moved to a new line with block indent + 1.
-some_long_command_name(
-  "Some very long argument that really needs to be on the next line.")
+some_long_command_name("Some very long argument that really needs to be on the next line.")
 
-# This situation is similar but the argument to a KWARG needs to be on a newline
-# instead.
-set(CMAKE_CXX_FLAGS
-    "-std=c++11 -Wall -Wno-sign-compare -Wno-unused-parameter -xx")
+# This situation is similar but the argument to a KWARG needs to be on a 
+# newline instead.
+set(CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wno-sign-compare -Wno-unused-parameter -xx"
+ )
 
 set(HEADERS
     header_a.h
@@ -95,3 +97,17 @@ foo(nonkwarg_a nonkwarg_b
             f.h
     SOURCES a.cc b.cc d.cc
     DEPENDS foo bar baz)
+
+# This command uses a string with escaped quote chars
+foo(
+  some_arg some_arg
+  "This is a \"string\" within a string")
+
+# This command uses an empty string
+foo(some_arg some_arg "")
+
+# This command uses a multiline string
+foo(some_arg some_arg "
+    This string is on multiple lines
+"
+ )

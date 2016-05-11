@@ -164,28 +164,28 @@ def expect(expected_type, toks):
         raise CMakeParseError(msg)
 
 # http://stackoverflow.com/questions/691148/pythonic-way-to-implement-a-tokenizer
-# TODO: Handle multiline strings.
+string_regex = re.compile(r'".*[^\\]?"', re.DOTALL)
 scanner = re.Scanner([
-    (r'#.*',                lambda scanner, token: ("comment", token)),
-    (r'"[^"]*"',            lambda scanner, token: ("string", token)),
+    (r'#[^\n]*',            lambda scanner, token: ("comment", token)),
+    (r'".*[^\\]?"',         lambda scanner, token: ("string", token)),
     (r"\(",                 lambda scanner, token: ("left paren", token)),
     (r"\)",                 lambda scanner, token: ("right paren", token)),
     (r'[^ \t\r\n()#"]+',    lambda scanner, token: ("word", token)),
     (r'\n',                 lambda scanner, token: ("newline", token)),
     (r"\s+",                None), # skip other whitespace
-])
+], re.DOTALL)
 
 def tokenize(s):
     """
     Yields pairs of the form (line_num, (token_type, token_contents))
     given a string containing the contents of a CMakeLists file.
     """
+
     toks, remainder = scanner.scan(s)
     if remainder != '':
-        msg = 'Unrecognized tokens at line %s: %s' % (line_num, remainder)
+        msg = 'Unrecognized tokens at line %s: %s' % (-1, remainder)
         raise ValueError(msg)
     line_num = 1
     for tok_type, tok_contents in toks:
         yield line_num, (tok_type, tok_contents.strip())
         line_num += tok_contents.count('\n')
-
