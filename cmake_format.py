@@ -50,6 +50,23 @@ DEFAULT_CONFIG = build_attr_dict_r(dict(
     additional_kwargs=dict(),
 ))
 
+# TODO(josh): Can we do better with a full function spec like this?
+CMAKE_FN_SPEC = {
+    'add_custom_command' : {
+        'kwargs' : {
+            'OUTPUT' : '+',
+            'COMMAND' : '+',
+            'MAIN_DEPENDENCY' : 1,
+            'DEPENDS' : '*',
+            'IMPLICIT_DEPENDS' : '*',
+            'WORKING_DIRECTORY' : 1,
+            'COMMENT' : '*',
+            'VERBATIM' : 0,
+            'APPEND' : 0 
+        }
+    }
+}
+
 # Maps command name to flag args, which are like kwargs but don't take',
 # subargument lists
 FLAG_MAP = {
@@ -502,6 +519,46 @@ def format_single_arg(config, line_width, arg):
     else:
         return [arg.contents]
 
+def split_shell_command(args):
+    """Given a list of arguments to a COMMAND, try to match flags and split
+       args into groups based on the location of flags (-f or --foo)."""
+    arglist = []
+    for arg in args:
+        if arg.contents.startswith('-'):
+            arglist.append([arg])
+        elif len(arglist) > 0:
+            arglist[-1].append(arg)
+        else:
+            arglist.append([arg])
+    return arglist
+
+def format_shell_command(config, line_width, command_name, args):
+    """Format arguments into a block with at most line_width chars."""
+
+    if not arg_exists_with_comment(args):
+        single_line = ' '.join([arg.contents for arg in args])
+        if len(single_line) < line_width:
+            return [single_line]
+
+    lines = []
+    arg_multilist = split_shell_command(args)
+    
+    # Look for strings of single arguments that can be joined together
+    arg_multilist_filtered = []
+    for arg_sublist in arg_multilist:
+        if (len(arg_sublist) == 1 and len(arg_multilist_filtered) > 0):
+            arg_multilist_filtered[-1].append(arg_sublist[0])
+        else:
+            arg_multilist_filtered.append(arg_sublist)
+
+
+    for arg_sublist in arg_multilist_filtered:
+        sublist_lines = format_arglist(config, line_width, command_name,
+                                       arg_sublist)
+        lines.extend(sublist_lines)
+
+    return lines
+
 
 def format_arglist(config, line_width, command_name, args):
     """Given a list arguments containing at most one KWARG (in position [0]
@@ -515,19 +572,41 @@ def format_arglist(config, line_width, command_name, args):
         if len(args) == 1:
             return [kwarg]
 
-        aligned_indent_str = ' ' * (len(kwarg) + 1)
-        tabbed_indent_str = ' ' * config.tab_size
+        # If the KWARG is 'COMMAND' then let's not put one entry per line,
+        # but fit as many command args per line as possible.
+        if kwarg == 'COMMAND':
+            # Copy the config and override max subargs per line
+            config = build_attr_dict_r(config)
+            config.max_subargs_per_line = 1e6
 
-        # Lines to append if we put them aligned with the end of the kwarg
-        lines_aligned = format_arglist(config,
-                                       line_width - len(aligned_indent_str),
-                                       command_name, args[1:])
+            aligned_indent_str = ' ' * (len(kwarg) + 1)
+            tabbed_indent_str = ' ' * config.tab_size
 
-        # Lines to append if we put them on lines after the kwarg and indented
-        # one block higher
-        lines_tabbed = format_arglist(config,
-                                      line_width - len(tabbed_indent_str),
-                                      command_name, args[1:])
+            # Lines to append if we put them aligned with the end of the kwarg
+            lines_aligned = format_shell_command(config,
+                                line_width - len(aligned_indent_str),
+                                args[1].contents, args[1:])
+
+            # Lines to append if we put them on lines after the kwarg and indented
+            # one block higher
+            lines_tabbed = format_shell_command(config,
+                                line_width - len(tabbed_indent_str),
+                                args[1].contents, args[1:])
+            
+        else:
+            aligned_indent_str = ' ' * (len(kwarg) + 1)
+            tabbed_indent_str = ' ' * config.tab_size
+
+            # Lines to append if we put them aligned with the end of the kwarg
+            lines_aligned = format_arglist(config,
+                                           line_width - len(aligned_indent_str),
+                                           command_name, args[1:])
+
+            # Lines to append if we put them on lines after the kwarg and indented
+            # one block higher
+            lines_tabbed = format_arglist(config,
+                                          line_width - len(tabbed_indent_str),
+                                          command_name, args[1:])
 
         # If aligned doesn't fit, then use tabbed
         if (get_block_width(lines_aligned)
@@ -540,7 +619,7 @@ def format_arglist(config, line_width, command_name, args):
     indent_str = ''
     lines = ['']
 
-    # TODO(josh): if aligning after the KWARG exeeds line with, then move one
+    # TODO(josh): if aligning after the KWARG exeeds line width, then move one
     # line below and align to the start + one indent.
 
     # if the there are "lots" of arguments in the list, put one per line,
@@ -590,6 +669,9 @@ def format_arglist(config, line_width, command_name, args):
 
 def format_args(config, line_width, command_name, args):
     """Format arguments into a block with at most line_width chars."""
+
+    # If there are no arguments that contain a comment, then attempt to
+    # pack all of the arguments onto a single line
     if not arg_exists_with_comment(args):
         single_line = ' '.join([arg.contents for arg in args])
         if len(single_line) < line_width:
@@ -597,22 +679,28 @@ def format_args(config, line_width, command_name, args):
 
     lines = []
     arg_multilist = split_args_by_kwargs(command_name, args)
+    
+    # Look for strings of single arguments that can be joined together
+    arg_multilist_filtered = []
     for arg_sublist in arg_multilist:
+        if (len(arg_sublist) == 1 and len(arg_multilist_filtered) > 0
+            and len(arg_multilist_filtered[-1]) < config.max_subargs_per_line):
+            arg_multilist_filtered[-1].append(arg_sublist[0])
+        else:
+            arg_multilist_filtered.append(arg_sublist)
+
+
+    for arg_sublist in arg_multilist_filtered:
         sublist_lines = format_arglist(config, line_width, command_name,
                                        arg_sublist)
-
-        # TODO(josh): look for cases where we can append to current line.
-        # for instance PROPERTIES COMPILE_FLAGS, PROPERTIES can go on
-        # previous line but COMPILE_FLAGS cannot insce it starts an
-        # arglist
         lines.extend(sublist_lines)
+
     return lines
 
 
 def get_block_width(lines):
     """Return the max width of any line within the list of lines."""
     return max(len(line) for line in lines)
-
 
 def format_command(config, command, line_width):
     """Formats a cmake command call into a block with at most line_width chars.
@@ -646,7 +734,7 @@ def format_command(config, command, line_width):
             indent_str = ' ' * config.tab_size
             for line in lines_b:
                 lines.append(indent_str + line)
-            if len(lines[-1]) < line_width:
+            if len(lines[-1]) < line_width and not command.body[-1].comments:
                 lines[-1] += ')'
             else:
                 lines.append(indent_str[:-1] + ')')
@@ -657,7 +745,7 @@ def format_command(config, command, line_width):
             indent_str = ' ' * len(command_start)
             for line in lines_a[1:]:
                 lines.append(indent_str + line)
-            if len(lines[-1]) < line_width:
+            if len(lines[-1]) < line_width and not command.body[-1].comments:
                 lines[-1] += ')'
             else:
                 lines.append(indent_str[:-1] + ')')
