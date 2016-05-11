@@ -1,8 +1,8 @@
 """Parse cmake listfiles and format them nicely."""
 
 import argparse
-import cmakelists_parsing.parsing as cmparse
 import collections
+import os
 import re
 import shutil
 import sys
@@ -10,6 +10,9 @@ import tempfile
 import textwrap
 import yaml
 
+THIS_DIR = os.path.realpath(os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(THIS_DIR, 'cmakelists_parsing'))
+import cmakelists_parsing.parsing as cmparse
 
 class AttrDict(dict):
     """Access elements of a dictionary as attributes."""
@@ -30,6 +33,7 @@ def build_attr_dict_r(regular_dict):
     return attr_dict
 
 SCOPE_INCREASE = ['if', 'foreach', 'while', 'function', 'macro']
+SCOPE_DEDENT   = ['else']
 SCOPE_DECREASE = ['endif', 'endforeach', 'endwhile', 'endfunction', 'endmacro']
 
 NOTE_REGEX = re.compile(r'^[A-Z_]+\([^)]+\):.*')
@@ -807,7 +811,7 @@ class PrettyPrinter(object):
             self.flush_comment()
             self.flush_blanks()
             command = part
-            if command.name in SCOPE_DECREASE:
+            if command.name in SCOPE_DECREASE or command.name in SCOPE_DEDENT:
                 self.scope_depth -= 1
 
             indent_str = ' ' * (self.config.tab_size * self.scope_depth)
@@ -815,7 +819,7 @@ class PrettyPrinter(object):
                                    self.config.line_width - len(indent_str))
             write_indented(self.outfile, indent_str, lines)
 
-            if command.name in SCOPE_INCREASE:
+            if command.name in SCOPE_INCREASE or command.name in SCOPE_DEDENT:
                 self.scope_depth += 1
 
         else:
