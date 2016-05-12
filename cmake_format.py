@@ -16,9 +16,9 @@ import yaml
 if __name__ == '__main__':
     THIS_DIR = os.path.realpath(os.path.dirname(__file__))
     sys.path.insert(0, THIS_DIR)
-    from cmakelists_parsing.cmakelists_parsing import parsing as cmparse
+    from cmlp.cmakelists_parsing import parsing as cmparse
 else:
-    from .cmakelists_parsing.cmakelists_parsing import parsing as cmparse
+    from .cmlp.cmakelists_parsing import parsing as cmparse
 
 class AttrDict(dict):
     """Access elements of a dictionary as attributes."""
