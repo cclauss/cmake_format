@@ -1,7 +1,7 @@
 from collections import namedtuple
 import re
 
-from cmakelists_parsing import list_utils
+from . import list_utils
 
 QuotedString = namedtuple('QuotedString', 'contents comments')
 _Arg = namedtuple('Arg', 'contents comments')

@@ -10,9 +10,15 @@ import tempfile
 import textwrap
 import yaml
 
-THIS_DIR = os.path.realpath(os.path.dirname(__file__))
-sys.path.insert(0, os.path.join(THIS_DIR, 'cmakelists_parsing'))
-import cmakelists_parsing.parsing as cmparse
+# Make sure we use our patched version of cmakelists_parsing. If we are calling
+# this file as a script then get this directory on the path before importing
+# cmakelists_parsing. Otherwise use a package relative import.
+if __name__ == '__main__':
+    THIS_DIR = os.path.realpath(os.path.dirname(__file__))
+    sys.path.insert(0, THIS_DIR)
+    from cmakelists_parsing.cmakelists_parsing import parsing as cmparse
+else:
+    from .cmakelists_parsing.cmakelists_parsing import parsing as cmparse
 
 class AttrDict(dict):
     """Access elements of a dictionary as attributes."""
@@ -33,7 +39,7 @@ def build_attr_dict_r(regular_dict):
     return attr_dict
 
 SCOPE_INCREASE = ['if', 'foreach', 'while', 'function', 'macro']
-SCOPE_DEDENT   = ['else']
+SCOPE_DEDENT = ['else']
 SCOPE_DECREASE = ['endif', 'endforeach', 'endwhile', 'endfunction', 'endmacro']
 
 NOTE_REGEX = re.compile(r'^[A-Z_]+\([^)]+\):.*')
@@ -66,7 +72,7 @@ CMAKE_FN_SPEC = {
             'WORKING_DIRECTORY' : 1,
             'COMMENT' : '*',
             'VERBATIM' : 0,
-            'APPEND' : 0 
+            'APPEND' : 0
         }
     }
 }
@@ -546,11 +552,11 @@ def format_shell_command(config, line_width, command_name, args):
 
     lines = []
     arg_multilist = split_shell_command(args)
-    
+
     # Look for strings of single arguments that can be joined together
     arg_multilist_filtered = []
     for arg_sublist in arg_multilist:
-        if (len(arg_sublist) == 1 and len(arg_multilist_filtered) > 0):
+        if len(arg_sublist) == 1 and len(arg_multilist_filtered) > 0:
             arg_multilist_filtered[-1].append(arg_sublist[0])
         else:
             arg_multilist_filtered.append(arg_sublist)
@@ -581,22 +587,25 @@ def format_arglist(config, line_width, command_name, args):
         if kwarg == 'COMMAND':
             # Copy the config and override max subargs per line
             config = build_attr_dict_r(config)
+            # pylint: disable=attribute-defined-outside-init
             config.max_subargs_per_line = 1e6
 
             aligned_indent_str = ' ' * (len(kwarg) + 1)
             tabbed_indent_str = ' ' * config.tab_size
 
             # Lines to append if we put them aligned with the end of the kwarg
+            line_width_aligned = line_width - len(aligned_indent_str)
             lines_aligned = format_shell_command(config,
-                                line_width - len(aligned_indent_str),
-                                args[1].contents, args[1:])
+                                                 line_width_aligned,
+                                                 args[1].contents, args[1:])
 
-            # Lines to append if we put them on lines after the kwarg and indented
-            # one block higher
+            # Lines to append if we put them on lines after the kwarg and
+            # indented one block higher
+            line_width_tabbed = line_width - len(tabbed_indent_str)
             lines_tabbed = format_shell_command(config,
-                                line_width - len(tabbed_indent_str),
-                                args[1].contents, args[1:])
-            
+                                                line_width_tabbed,
+                                                args[1].contents, args[1:])
+
         else:
             aligned_indent_str = ' ' * (len(kwarg) + 1)
             tabbed_indent_str = ' ' * config.tab_size
@@ -606,8 +615,8 @@ def format_arglist(config, line_width, command_name, args):
                                            line_width - len(aligned_indent_str),
                                            command_name, args[1:])
 
-            # Lines to append if we put them on lines after the kwarg and indented
-            # one block higher
+            # Lines to append if we put them on lines after the kwarg and
+            # indented one block higher
             lines_tabbed = format_arglist(config,
                                           line_width - len(tabbed_indent_str),
                                           command_name, args[1:])
@@ -683,12 +692,14 @@ def format_args(config, line_width, command_name, args):
 
     lines = []
     arg_multilist = split_args_by_kwargs(command_name, args)
-    
+
     # Look for strings of single arguments that can be joined together
     arg_multilist_filtered = []
     for arg_sublist in arg_multilist:
+
+        max_subargs = config.max_subargs_per_line
         if (len(arg_sublist) == 1 and len(arg_multilist_filtered) > 0
-            and len(arg_multilist_filtered[-1]) < config.max_subargs_per_line):
+                and len(arg_multilist_filtered[-1]) < max_subargs):
             arg_multilist_filtered[-1].append(arg_sublist[0])
         else:
             arg_multilist_filtered.append(arg_sublist)
@@ -752,9 +763,14 @@ def format_command(config, command, line_width):
             else:
                 lines.append(indent_str[:-1] + ')')
 
+        # If the comman itself has a trailing line comment then attempt to
+        # keep the comment attached to the command, but consider also moving
+        # the comment to it's own line if that uses up a lot less lines.
         if command.comment:
+            line_width_append = line_width - len(lines[-1]) - 1
             comment_lines_append = format_comment_block(config,
-                line_width - len(lines[-1]) - 1, [command.comment])
+                                                        line_width_append,
+                                                        [command.comment])
 
             comment_lines_extend = format_comment_block(config, line_width,
                                                         [command.comment])
